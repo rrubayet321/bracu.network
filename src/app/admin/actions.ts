@@ -41,6 +41,24 @@ export async function rejectMember(id: string) {
   return { success: true };
 }
 
+export async function removeMember(id: string) {
+  const admin = getAdminClient();
+
+  const { error } = await admin
+    .from('members')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Remove error:', error);
+    return { error: 'Failed to remove member' };
+  }
+
+  revalidatePath('/');
+  revalidatePath('/admin');
+  return { success: true };
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getAdminClient } from '@/lib/supabase/admin-server';
 import AdminMemberCard from '@/components/AdminMemberCard';
-import { signOut } from './actions';
+import { signOut, removeMember } from './actions';
 import type { Member } from '@/types/member';
 
 export const metadata: Metadata = {
@@ -83,17 +83,35 @@ export default async function AdminPage() {
                   fontSize: 13,
                 }}
               >
-                <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-                  {m.name}
-                </span>
-                <a
-                  href={m.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'var(--accent)', fontSize: 12 }}
-                >
-                  {m.website}
-                </a>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+                    {m.name}
+                  </span>
+                  <a
+                    href={m.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--accent)', fontSize: 12 }}
+                  >
+                    {m.website}
+                  </a>
+                </div>
+                <form action={removeMember.bind(null, m.id)}>
+                  <button 
+                    type="submit" 
+                    style={{ 
+                      background: 'transparent', 
+                      border: '1px solid var(--border)', 
+                      color: 'var(--text-muted)', 
+                      padding: '4px 8px', 
+                      borderRadius: '4px', 
+                      fontSize: 12,
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    Remove
+                  </button>
+                </form>
               </div>
             ))}
           </div>
