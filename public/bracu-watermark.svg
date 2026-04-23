@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Outer arc — abstract ring symbolising connection/community -->
+  <circle cx="100" cy="100" r="88" stroke="white" stroke-width="6" stroke-dasharray="30 12" stroke-linecap="round"/>
+  <!-- Inner geometric shape — stylised B for BRACU -->
+  <path d="M70 55 L70 145 L100 145 C120 145 135 133 135 115 C135 100 125 93 112 90 C124 86 132 78 132 65 C132 48 118 55 100 55 Z" stroke="white" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Book pages — two horizontal lines representing knowledge -->
+  <line x1="78" y1="90" x2="118" y2="90" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <line x1="78" y1="120" x2="112" y2="120" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <!-- Dot accent -->
+  <circle cx="100" cy="170" r="5" fill="white"/>
+</svg>
