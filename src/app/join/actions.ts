@@ -8,6 +8,10 @@ import { DEPARTMENT_OPTIONS } from '@/types/member';
 
 const memberSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
+  member_type: z.enum(['student', 'alumni'], { error: 'Select whether you are a student or alumni' }),
+  student_id: z
+    .string()
+    .regex(/^20\d{7}$/, 'Student ID must match 20XXXXXXX format'),
   website: z
     .string()
     .url('Must be a valid URL')
@@ -18,6 +22,24 @@ const memberSchema = z.object({
     .regex(/^(Spring|Summer|Fall|Autumn) \d{4}$/, 'Format: Spring 2024')
     .optional()
     .or(z.literal('')),
+  residential_semester: z
+    .string()
+    .regex(/^RS-\d{2}$/i, 'Format: RS-XX (example: RS-60)')
+    .optional()
+    .or(z.literal('')),
+  residential_semester_public: z.enum(['true']).optional(),
+  current_semester: z
+    .string()
+    .regex(/^(Spring|Summer|Fall|Autumn) \d{4}$/, 'Format: Spring 2026')
+    .optional()
+    .or(z.literal('')),
+  expected_graduation_semester: z
+    .string()
+    .regex(/^(Spring|Summer|Fall|Autumn) \d{4}$/, 'Format: Fall 2027')
+    .optional()
+    .or(z.literal('')),
+  alumni_work_sector: z.enum(['academia', 'industry']).optional().or(z.literal('')),
+  alumni_field_alignment: z.enum(['own_field', 'other_field']).optional().or(z.literal('')),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   bracu_email: z
     .string()
@@ -70,6 +92,22 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
   }
 
   const data = parsed.data;
+  if (data.member_type === 'student') {
+    if (!data.current_semester) {
+      return { error: { current_semester: ['Please provide your current semester'] } };
+    }
+    if (!data.expected_graduation_semester) {
+      return { error: { expected_graduation_semester: ['Please provide expected graduation semester'] } };
+    }
+  }
+  if (data.member_type === 'alumni') {
+    if (!data.alumni_work_sector) {
+      return { error: { alumni_work_sector: ['Please select academia or industry'] } };
+    }
+    if (!data.alumni_field_alignment) {
+      return { error: { alumni_field_alignment: ['Please select own field or other field'] } };
+    }
+  }
 
   // ── Photo upload ───────────────────────────────────────────────────
   let profilePicUrl: string | null = null;
@@ -129,12 +167,21 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
   }
 
   // ── Insert via adminClient (bypasses RLS) ─────────────────────────
-  const { error: insertError } = await admin.from('members').insert({
+  const extendedInsertPayload = {
     slug,
     name: data.name,
+    student_id: data.student_id,
+    member_type: data.member_type,
     website: data.website,
     department: data.department,
-    batch: data.batch || null,
+    batch: data.batch || null, // joining semester at BRACU
+    joined_semester: data.batch || null,
+    residential_semester: data.residential_semester || null,
+    residential_semester_public: data.residential_semester_public === 'true',
+    current_semester: data.current_semester || null,
+    expected_graduation_semester: data.expected_graduation_semester || null,
+    alumni_work_sector: data.alumni_work_sector || null,
+    alumni_field_alignment: data.alumni_field_alignment || null,
     email: data.email || null,
     bracu_email: data.bracu_email || null,
     instagram: data.instagram || null,
@@ -146,7 +193,33 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
     interests,
     connections: [],
     is_approved: false,
-  });
+  };
+
+  // Attempt to persist new profile fields first.
+  let { error: insertError } = await admin.from('members').insert(extendedInsertPayload);
+
+  // Backward-compat fallback for databases that do not yet have the new columns.
+  if (insertError && /column/i.test(insertError.message ?? '')) {
+    const { error: fallbackError } = await admin.from('members').insert({
+      slug,
+      name: data.name,
+      website: data.website,
+      department: data.department,
+      batch: data.batch || null,
+      email: data.email || null,
+      bracu_email: data.bracu_email || null,
+      instagram: data.instagram || null,
+      twitter: data.twitter || null,
+      linkedin: data.linkedin || null,
+      github: data.github || null,
+      profile_pic: profilePicUrl,
+      roles,
+      interests,
+      connections: [],
+      is_approved: false,
+    });
+    insertError = fallbackError;
+  }
 
   if (insertError?.code === '23505') {
     return { error: 'A member with this website URL already exists.' };

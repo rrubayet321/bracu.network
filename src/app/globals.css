@@ -578,6 +578,38 @@ a:hover { color: var(--text-primary); }
 }
 .checkbox-item:hover { color: var(--text-primary); }
 
+.tag-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tag-input-row .form-input {
+  flex: 1;
+}
+
+.tag-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tag-chip {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.tag-chip:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
 /* File upload */
 .file-upload-area {
   border: 2px dashed var(--border);

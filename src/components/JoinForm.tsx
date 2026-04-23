@@ -1,8 +1,13 @@
 'use client';
 
-import { useState, useRef, useTransition } from 'react';
+import { useMemo, useRef, useState, useTransition } from 'react';
 import { submitJoinRequest } from '@/app/join/actions';
-import { DEPARTMENT_OPTIONS, ROLE_OPTIONS, INTEREST_OPTIONS } from '@/types/member';
+import {
+  DEPARTMENT_OPTIONS,
+  DEPARTMENT_INTEREST_SUGGESTIONS,
+  DEPARTMENT_ROLE_SUGGESTIONS,
+  type Department,
+} from '@/types/member';
 import { Upload, Loader2, CheckCircle2 } from 'lucide-react';
 
 export default function JoinForm() {
@@ -11,7 +16,22 @@ export default function JoinForm() {
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [photoName, setPhotoName] = useState<string | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | ''>('');
+  const [roles, setRoles] = useState<string[]>([]);
+  const [interests, setInterests] = useState<string[]>([]);
+  const [roleDraft, setRoleDraft] = useState('');
+  const [interestDraft, setInterestDraft] = useState('');
+  const [memberType, setMemberType] = useState<'student' | 'alumni' | ''>('');
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const roleSuggestions = useMemo(
+    () => (selectedDepartment ? DEPARTMENT_ROLE_SUGGESTIONS[selectedDepartment] : []),
+    [selectedDepartment]
+  );
+  const interestSuggestions = useMemo(
+    () => (selectedDepartment ? DEPARTMENT_INTEREST_SUGGESTIONS[selectedDepartment] : []),
+    [selectedDepartment]
+  );
 
   if (success) {
     return (
@@ -54,6 +74,20 @@ export default function JoinForm() {
     return msgs && msgs.length > 0 ? (
       <span className="form-error">{msgs[0]}</span>
     ) : null;
+  }
+
+  function normalizeTag(value: string) {
+    return value.trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  function addTag(value: string, list: string[], setter: (next: string[]) => void) {
+    const normalized = normalizeTag(value);
+    if (!normalized || list.includes(normalized)) return;
+    setter([...list, normalized]);
+  }
+
+  function removeTag(value: string, list: string[], setter: (next: string[]) => void) {
+    setter(list.filter((item) => item !== value));
   }
 
   return (
@@ -102,7 +136,19 @@ export default function JoinForm() {
         <label htmlFor="join-department" className="form-label">
           Department <span className="required">*</span>
         </label>
-        <select id="join-department" name="department" className="form-select" required defaultValue="">
+        <select
+          id="join-department"
+          name="department"
+          className="form-select"
+          required
+          value={selectedDepartment}
+          onChange={(e) => {
+            const next = e.target.value as Department | '';
+            setSelectedDepartment(next);
+            setRoles([]);
+            setInterests([]);
+          }}
+        >
           <option value="" disabled>Select your department</option>
           {DEPARTMENT_OPTIONS.map((d) => (
             <option key={d} value={d}>{d}</option>
@@ -117,7 +163,41 @@ export default function JoinForm() {
       <p className="form-section-title">Optional</p>
 
       <div className="form-group">
-        <label htmlFor="join-batch" className="form-label">Batch / Year</label>
+        <label htmlFor="join-member-type" className="form-label">
+          Are you joining as <span className="required">*</span>
+        </label>
+        <select
+          id="join-member-type"
+          name="member_type"
+          className="form-select"
+          value={memberType}
+          onChange={(e) => setMemberType(e.target.value as 'student' | 'alumni' | '')}
+          required
+        >
+          <option value="" disabled>Select one</option>
+          <option value="student">Current student</option>
+          <option value="alumni">Alumni</option>
+        </select>
+        {fieldError('member_type')}
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="join-student-id" className="form-label">
+          Student ID <span className="required">*</span>
+        </label>
+        <input
+          id="join-student-id"
+          name="student_id"
+          type="text"
+          className="form-input"
+          placeholder="20XXXXXXX"
+          required
+        />
+        {fieldError('student_id')}
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="join-batch" className="form-label">Joining Semester at BRACU</label>
         <input
           id="join-batch"
           name="batch"
@@ -125,9 +205,83 @@ export default function JoinForm() {
           className="form-input"
           placeholder="Spring 2024"
         />
-        <span className="form-hint">Format: Spring 2024, Fall 2023, etc.</span>
+        <span className="form-hint">This is the semester you started at BRACU.</span>
         {fieldError('batch')}
       </div>
+
+      <div className="form-group">
+        <label htmlFor="join-residential-semester" className="form-label">Current Residential Semester</label>
+        <input
+          id="join-residential-semester"
+          name="residential_semester"
+          type="text"
+          className="form-input"
+          placeholder="RS-60"
+        />
+        <span className="form-hint">Format: RS-XX (example: RS-60).</span>
+        {fieldError('residential_semester')}
+      </div>
+
+      <div className="form-group" style={{ marginTop: -8 }}>
+        <label className="checkbox-item">
+          <input type="checkbox" name="residential_semester_public" value="true" />
+          I allow my residential semester to be shown publicly.
+        </label>
+      </div>
+
+      {memberType === 'student' && (
+        <>
+          <div className="form-group">
+            <label htmlFor="join-current-semester" className="form-label">Which semester are you in now?</label>
+            <input
+              id="join-current-semester"
+              name="current_semester"
+              type="text"
+              className="form-input"
+              placeholder="Spring 2026"
+            />
+            {fieldError('current_semester')}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="join-expected-graduation-semester" className="form-label">Expected graduation semester</label>
+            <input
+              id="join-expected-graduation-semester"
+              name="expected_graduation_semester"
+              type="text"
+              className="form-input"
+              placeholder="Fall 2027"
+            />
+            {fieldError('expected_graduation_semester')}
+          </div>
+        </>
+      )}
+
+      {memberType === 'alumni' && (
+        <>
+          <div className="form-group">
+            <label htmlFor="join-alumni-work-sector" className="form-label">
+              Do you work in academia or industry?
+            </label>
+            <select id="join-alumni-work-sector" name="alumni_work_sector" className="form-select" defaultValue="">
+              <option value="" disabled>Select one</option>
+              <option value="academia">Academia</option>
+              <option value="industry">Industry</option>
+            </select>
+            {fieldError('alumni_work_sector')}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="join-alumni-field-alignment" className="form-label">Are you working in your own field?</label>
+            <select id="join-alumni-field-alignment" name="alumni_field_alignment" className="form-select" defaultValue="">
+              <option value="" disabled>Select one</option>
+              <option value="own_field">Own field</option>
+              <option value="other_field">Other field</option>
+            </select>
+            {fieldError('alumni_field_alignment')}
+          </div>
+        </>
+      )}
 
       <div className="form-group">
         <label htmlFor="join-bracu-email" className="form-label">
@@ -190,28 +344,112 @@ export default function JoinForm() {
 
       {/* Roles */}
       <div className="form-group">
-        <label className="form-label">Roles <span className="form-hint">(pick all that apply)</span></label>
-        <div className="checkbox-grid">
-          {ROLE_OPTIONS.map((r) => (
-            <label key={r} className="checkbox-item">
-              <input type="checkbox" name="roles" value={r} />
-              {r}
-            </label>
+        <label htmlFor="join-role-input" className="form-label">
+          Roles <span className="form-hint">(choose a suggestion or write your own)</span>
+        </label>
+        <div className="tag-input-row">
+          <input
+            id="join-role-input"
+            list="role-suggestions"
+            className="form-input"
+            placeholder={selectedDepartment ? 'Type a role and press Add' : 'Select department first'}
+            value={roleDraft}
+            onChange={(e) => setRoleDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addTag(roleDraft, roles, setRoles);
+                setRoleDraft('');
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              addTag(roleDraft, roles, setRoles);
+              setRoleDraft('');
+            }}
+          >
+            Add
+          </button>
+        </div>
+        <datalist id="role-suggestions">
+          {roleSuggestions.map((role) => (
+            <option key={role} value={role} />
+          ))}
+        </datalist>
+        <div className="tag-chip-list">
+          {roles.map((role) => (
+            <button
+              key={role}
+              type="button"
+              className="tag-chip"
+              onClick={() => removeTag(role, roles, setRoles)}
+              title="Remove"
+            >
+              {role} ×
+            </button>
           ))}
         </div>
+        {roles.map((role) => (
+          <input key={role} type="hidden" name="roles" value={role} />
+        ))}
       </div>
 
       {/* Interests */}
       <div className="form-group">
-        <label className="form-label">Interests / Verticals <span className="form-hint">(pick all that apply)</span></label>
-        <div className="checkbox-grid">
-          {INTEREST_OPTIONS.map((i) => (
-            <label key={i} className="checkbox-item">
-              <input type="checkbox" name="interests" value={i} />
-              {i}
-            </label>
+        <label htmlFor="join-interest-input" className="form-label">
+          Interests <span className="form-hint">(choose a suggestion or write your own)</span>
+        </label>
+        <div className="tag-input-row">
+          <input
+            id="join-interest-input"
+            list="interest-suggestions"
+            className="form-input"
+            placeholder={selectedDepartment ? 'Type an interest and press Add' : 'Select department first'}
+            value={interestDraft}
+            onChange={(e) => setInterestDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addTag(interestDraft, interests, setInterests);
+                setInterestDraft('');
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              addTag(interestDraft, interests, setInterests);
+              setInterestDraft('');
+            }}
+          >
+            Add
+          </button>
+        </div>
+        <datalist id="interest-suggestions">
+          {interestSuggestions.map((interest) => (
+            <option key={interest} value={interest} />
+          ))}
+        </datalist>
+        <div className="tag-chip-list">
+          {interests.map((interest) => (
+            <button
+              key={interest}
+              type="button"
+              className="tag-chip"
+              onClick={() => removeTag(interest, interests, setInterests)}
+              title="Remove"
+            >
+              {interest} ×
+            </button>
           ))}
         </div>
+        {interests.map((interest) => (
+          <input key={interest} type="hidden" name="interests" value={interest} />
+        ))}
       </div>
 
       <hr className="section-divider" />
