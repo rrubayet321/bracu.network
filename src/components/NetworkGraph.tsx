@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import type { Member } from '@/types/member';
+import { GlowCard } from '@/components/ui/spotlight-card';
 
 interface Node {
   id: string;
@@ -273,8 +274,8 @@ export default function NetworkGraph({ members, highlightSlug }: NetworkGraphPro
   }, [members, tick]);
 
   return (
-    <div className="graph-container" id="network-graph">
-      <canvas ref={canvasRef} className="graph-canvas" />
-    </div>
+    <GlowCard customSize={true} className="graph-container" glowColor="red">
+      <canvas ref={canvasRef} className="graph-canvas" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+    </GlowCard>
   );
 }
