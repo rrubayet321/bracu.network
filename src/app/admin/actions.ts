@@ -59,6 +59,13 @@ export async function removeMember(id: string) {
   return { success: true };
 }
 
+/** For `<form action={...}>` — Next.js requires `void` return, not an object. */
+export async function removeMemberFormAction(formData: FormData) {
+  const id = formData.get('id');
+  if (typeof id !== 'string' || !id) return;
+  await removeMember(id);
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

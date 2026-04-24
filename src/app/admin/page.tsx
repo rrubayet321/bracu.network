@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getAdminClient } from '@/lib/supabase/admin-server';
 import AdminMemberCard from '@/components/AdminMemberCard';
-import { signOut, removeMember } from './actions';
+import { signOut, removeMemberFormAction } from './actions';
 import type { Member } from '@/types/member';
 
 export const metadata: Metadata = {
@@ -96,7 +96,8 @@ export default async function AdminPage() {
                     {m.website}
                   </a>
                 </div>
-                <form action={removeMember.bind(null, m.id)}>
+                <form action={removeMemberFormAction}>
+                  <input type="hidden" name="id" value={m.id} />
                   <button 
                     type="submit" 
                     style={{ 

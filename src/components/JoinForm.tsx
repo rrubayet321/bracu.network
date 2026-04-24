@@ -110,7 +110,7 @@ export default function JoinForm() {
           name="name"
           type="text"
           className="form-input"
-          placeholder="Rubayet Hassan"
+          placeholder="John Doe"
           required
         />
         {fieldError('name')}

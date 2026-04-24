@@ -1,5 +1,9 @@
 import { ImageResponse } from 'next/og';
 import { createClient } from '@/lib/supabase/server';
+import { isSupabaseConfigured } from '@/lib/supabase/config';
+import { withTimeout } from '@/lib/with-timeout';
+
+const OG_QUERY_MS = 12_000;
 
 export const runtime = 'edge';
 
@@ -9,11 +13,23 @@ export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export default async function Image() {
-  const supabase = await createClient();
-  const { count } = await supabase
-    .from('members')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_approved', true);
+  let count: number | null = 0;
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createClient();
+      const r = await withTimeout(
+        supabase
+          .from('members')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_approved', true),
+        OG_QUERY_MS,
+        () => {}
+      );
+      count = r.count;
+    } catch {
+      count = 0;
+    }
+  }
 
   return new ImageResponse(
     (

@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { PenTool, Code, Search, Rocket } from 'lucide-react';
 
 export default function AnimatedHero() {
   return (
@@ -22,28 +21,28 @@ export default function AnimatedHero() {
 
           {/* Top Boxes (Roles) */}
           <foreignObject x="30" y="20" width="140" height="40">
-            <div className="role-box" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
-              <PenTool size={16} /> Designers
+            <div className="role-box">
+              DESIGNERS
             </div>
           </foreignObject>
           <foreignObject x="230" y="20" width="140" height="40">
-            <div className="role-box" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
-              <Code size={16} /> Engineers
+            <div className="role-box">
+              ENGINEERS
             </div>
           </foreignObject>
           <foreignObject x="430" y="20" width="140" height="40">
-            <div className="role-box" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
-              <Search size={16} /> Researchers
+            <div className="role-box">
+              RESEARCHERS
             </div>
           </foreignObject>
           <foreignObject x="630" y="20" width="140" height="40">
-            <div className="role-box" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
-              <Rocket size={16} /> Founders
+            <div className="role-box">
+              FOUNDERS
             </div>
           </foreignObject>
 
           {/* Main Title Box */}
-          <foreignObject x="200" y="240" width="400" height="100">
+          <foreignObject x="0" y="240" width="800" height="100">
             <div className="hero-main-title-box">
               <h1 className="hero-title">bracu.network</h1>
             </div>
@@ -53,15 +52,15 @@ export default function AnimatedHero() {
 
       <div className="hero-text-content">
         <p className="hero-description">
-          BRAC University students and alumni who are out here building
-          things, breaking things, and occasionally sleeping.
+          A home for the most ambitious builders, thinkers, and creators from the
+          BRAC University community. Connecting us all to build the future together.
         </p>
         <p className="hero-description" style={{ marginTop: 8 }}>
-          <span style={{ color: '#a78bfa' }}>Designers</span>,{' '}
-          <span style={{ color: '#34d399' }}>engineers</span>,{' '}
-          <span style={{ color: '#60a5fa' }}>researchers</span>,{' '}
-          <span style={{ color: '#f472b6' }}>founders</span>{' '}
-          — all welcome. Yes, even the business majors. 👀
+          <span className="pearl-glow">DESIGNERS</span>,{' '}
+          <span className="pearl-glow">ENGINEERS</span>,{' '}
+          <span className="pearl-glow">RESEARCHERS</span>,{' '}
+          <span className="pearl-glow">FOUNDERS</span>{' '}
+          — all welcome. Yes, even the business majors.
         </p>
         <p className="hero-cta">
           Are you a BRACUian?{' '}
