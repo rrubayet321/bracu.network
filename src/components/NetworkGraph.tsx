@@ -1,19 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Member } from '@/types/member';
 import { GlowCard } from '@/components/ui/spotlight-card';
 
 interface Node {
+  id: number;
   slug: string;
   name: string;
+  x: number;
+  y: number;
+  z: number;
+  connections: number[];
+  color: string;
   profilePic?: string;
-  theta: number;
-  phi: number;
-  sx: number;
-  sy: number;
-  sz: number;
-  depthScale: number;
   img?: HTMLImageElement;
 }
 
@@ -22,240 +22,322 @@ interface NetworkGraphProps {
   highlightSlug?: string | null;
 }
 
-const BASE_NODE_RADIUS = 18;
-const HOVER_NODE_RADIUS = 28;
-const ROTATION_SPEED_Y = 0.0022;
-const ROTATION_SPEED_X = 0.0009;
+const DOT_COLOR = 'rgba(255, 255, 255, 0.92)';
+const HOVER_COLOR = 'rgba(255, 255, 255, 1)';
+const CONNECTION_COLOR = 'rgba(255, 255, 255, 0.13)';
+const AUTO_ROTATE_SPEED = 0.0022;
+const FOV = 600;
+const BASE_RADIUS = 10;
+
+function rotateY(x: number, y: number, z: number, angle: number): [number, number, number] {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return [x * cos + z * sin, y, -x * sin + z * cos];
+}
+
+function rotateX(x: number, y: number, z: number, angle: number): [number, number, number] {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return [x, y * cos - z * sin, y * sin + z * cos];
+}
+
+function project(x: number, y: number, z: number, cx: number, cy: number, fov: number): [number, number] {
+  const scale = fov / (fov + z);
+  return [x * scale + cx, y * scale + cy];
+}
+
+function makeSeedRand(seed: number) {
+  const s = Math.sin(seed * 999.123) * 10000;
+  return s - Math.floor(s);
+}
 
 export default function NetworkGraph({ members, highlightSlug }: NetworkGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const parentRef = useRef<HTMLDivElement>(null);
   const nodesRef = useRef<Node[]>([]);
+  const transformedRef = useRef<Array<{ node: Node; sx: number; sy: number; z: number; visible: boolean }>>([]);
+  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const rafRef = useRef<number>(0);
-  const highlightRef = useRef<string | null>(null);
-  const hoveredSlugRef = useRef<string | null>(null);
-  const rotationRef = useRef({ x: 0, y: 0 });
-  const pointerRef = useRef({ x: -9999, y: -9999 });
-  const frameRef = useRef(0);
+  const rotRef = useRef({ y: 0.4, x: 0.3 });
+  const dragRef = useRef({ active: false, x: 0, y: 0, rotY: 0, rotX: 0 });
+  const sizeRef = useRef({ w: 0, h: 0, dpr: 1 });
+  const hoveredIdRef = useRef<number | null>(null);
+  const highlightIdRef = useRef<number | null>(null);
+  const memberIndexBySlug = useMemo(
+    () => new Map(members.map((m, i) => [m.slug, i])),
+    [members]
+  );
 
-  const tick = useCallback(function tickFn() {
+  useEffect(() => {
+    highlightIdRef.current =
+      highlightSlug && memberIndexBySlug.has(highlightSlug)
+        ? memberIndexBySlug.get(highlightSlug) ?? null
+        : null;
+  }, [highlightSlug, memberIndexBySlug]);
+
+  useEffect(() => {
+    const goldenRatio = (1 + Math.sqrt(5)) / 2;
+    nodesRef.current = members.map((m, i) => {
+      const theta = (2 * Math.PI * i) / goldenRatio;
+      const phi = Math.acos(1 - (2 * (i + 0.5)) / Math.max(members.length, 1));
+      const x = Math.cos(theta) * Math.sin(phi);
+      const y = Math.cos(phi);
+      const z = Math.sin(theta) * Math.sin(phi);
+
+      const deterministicConnections = new Set<number>();
+      const fromData = (m.connections ?? [])
+        .map((slug) => memberIndexBySlug.get(slug))
+        .filter((idx): idx is number => typeof idx === 'number');
+      for (const idx of fromData.slice(0, 4)) {
+        if (idx !== i) deterministicConnections.add(idx);
+      }
+      if (deterministicConnections.size === 0) {
+        const n = members.length;
+        const numConnections = 1 + Math.floor(makeSeedRand(i) * 2);
+        for (let j = 0; j < numConnections; j++) {
+          const connId = Math.floor(makeSeedRand(i * 31 + j * 17) * Math.max(n, 1));
+          if (connId !== i) deterministicConnections.add(connId);
+        }
+      }
+
+      let img: HTMLImageElement | undefined;
+      if (m.profile_pic) {
+        img = imageCacheRef.current.get(m.profile_pic);
+        if (!img) {
+          img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = m.profile_pic;
+          imageCacheRef.current.set(m.profile_pic, img);
+        }
+      }
+
+      return {
+        id: i,
+        slug: m.slug,
+        name: m.name,
+        x,
+        y,
+        z,
+        connections: [...deterministicConnections],
+        color: `hsl(${(i * 137.508) % 360} 80% 70%)`,
+        profilePic: m.profile_pic,
+        img,
+      };
+    });
+    hoveredIdRef.current = null;
+  }, [members, memberIndexBySlug]);
+
+  const hitTest = useCallback((clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    let closestId: number | null = null;
+    let closestDist = Infinity;
+    for (const item of transformedRef.current) {
+      if (!item.visible) continue;
+      const dist = Math.hypot(x - item.sx, y - item.sy);
+      if (dist < 30 && dist < closestDist) {
+        closestDist = dist;
+        closestId = item.node.id;
+      }
+    }
+    hoveredIdRef.current = closestId;
+  }, []);
+
+  const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const nodes = nodesRef.current;
-    const W = canvas.width;
-    const H = canvas.height;
-    const cx = W / 2;
-    const cy = H / 2;
-    const globeRadius = Math.min(W, H) * 0.36;
-    const perspective = globeRadius * 2.5;
-
-    frameRef.current += 1;
-    rotationRef.current.y += ROTATION_SPEED_Y;
-    rotationRef.current.x += ROTATION_SPEED_X;
-
-    // Project 3D sphere points to 2D canvas
-    const sinY = Math.sin(rotationRef.current.y);
-    const cosY = Math.cos(rotationRef.current.y);
-    const sinX = Math.sin(rotationRef.current.x);
-    const cosX = Math.cos(rotationRef.current.x);
-    for (const n of nodes) {
-      const x = Math.sin(n.phi) * Math.cos(n.theta);
-      const y = Math.cos(n.phi);
-      const z = Math.sin(n.phi) * Math.sin(n.theta);
-
-      const x1 = x * cosY - z * sinY;
-      const z1 = x * sinY + z * cosY;
-      const y2 = y * cosX - z1 * sinX;
-      const z2 = y * sinX + z1 * cosX;
-
-      const depthScale = perspective / (perspective - z2 * globeRadius);
-      n.sx = cx + x1 * globeRadius * depthScale;
-      n.sy = cy + y2 * globeRadius * depthScale;
-      n.sz = z2;
-      n.depthScale = depthScale;
+    const { w, h } = sizeRef.current;
+    if (!w || !h) {
+      rafRef.current = requestAnimationFrame(draw);
+      return;
     }
 
-    ctx.clearRect(0, 0, W, H);
-    ctx.save();
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = Math.min(w, h) * 0.38;
+
+    if (!dragRef.current.active) rotRef.current.y += AUTO_ROTATE_SPEED;
+
+    ctx.clearRect(0, 0, w, h);
+    const g = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius * 1.2);
+    g.addColorStop(0, '#0a0a0a');
+    g.addColorStop(1, '#000000');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+
     ctx.beginPath();
-    ctx.arc(cx, cy, globeRadius + 10, 0, Math.PI * 2);
-    ctx.clip();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-    const hl = highlightRef.current;
-    const hovered = hoveredSlugRef.current;
-    const sortedNodes = [...nodes].sort((a, b) => a.sz - b.sz);
+    const transformed = nodesRef.current.map((node) => {
+      let x = node.x * radius;
+      let y = node.y * radius;
+      let z = node.z * radius;
+      [x, y, z] = rotateX(x, y, z, rotRef.current.x);
+      [x, y, z] = rotateY(x, y, z, rotRef.current.y);
+      const visible = z <= 0;
+      const [sx, sy] = project(x, y, z, cx, cy, FOV);
+      return { node, sx, sy, z, visible };
+    });
+    transformedRef.current = transformed;
+    const byId = new Map(transformed.map((t) => [t.node.id, t] as const));
 
-    // Draw a complete graph (all users connected to all users)
-    for (let i = 0; i < sortedNodes.length; i++) {
-      for (let j = i + 1; j < sortedNodes.length; j++) {
-        const a = sortedNodes[i];
-        const b = sortedNodes[j];
-        const avgDepth = (a.sz + b.sz) / 2;
-        const alpha = 0.06 + (avgDepth + 1) * 0.08;
-        const isActive = hl && (a.slug === hl || b.slug === hl);
+    const hoveredId = hoveredIdRef.current;
+    const highlightedId = highlightIdRef.current;
+    const hoveredNode = hoveredId !== null ? nodesRef.current[hoveredId] : null;
+    const highlightedNode = highlightedId !== null ? nodesRef.current[highlightedId] : null;
+
+    for (const item of transformed) {
+      if (!item.visible) continue;
+      for (const connId of item.node.connections) {
+        if (connId <= item.node.id) continue;
+        const other = byId.get(connId);
+        if (!other || !other.visible) continue;
+        const isHoveredEdge = hoveredNode && (item.node.id === hoveredNode.id || other.node.id === hoveredNode.id);
+        const isHighlightedEdge = highlightedNode && (item.node.id === highlightedNode.id || other.node.id === highlightedNode.id);
         ctx.beginPath();
-        ctx.moveTo(a.sx, a.sy);
-        ctx.lineTo(b.sx, b.sy);
-        ctx.strokeStyle = isActive
-          ? 'rgba(74,108,247,0.45)'
-          : `rgba(115, 130, 160, ${Math.min(alpha, 0.18)})`;
-        ctx.lineWidth = isActive ? 1.2 : 0.8;
+        ctx.moveTo(item.sx, item.sy);
+        ctx.lineTo(other.sx, other.sy);
+        ctx.strokeStyle = isHoveredEdge || isHighlightedEdge ? 'rgba(120,150,255,0.35)' : CONNECTION_COLOR;
+        ctx.globalAlpha = isHoveredEdge || isHighlightedEdge ? 0.85 : 0.6;
+        ctx.lineWidth = isHoveredEdge || isHighlightedEdge ? 1 : 0.6;
         ctx.stroke();
       }
     }
+    ctx.globalAlpha = 1;
 
-    // Draw nodes front-to-back for depth
-    for (const node of sortedNodes) {
-      const isHighlighted = hl === node.slug || hovered === node.slug;
-      const r = isHighlighted
-        ? HOVER_NODE_RADIUS * node.depthScale
-        : BASE_NODE_RADIUS * node.depthScale;
+    for (const item of transformed) {
+      if (!item.visible) continue;
+      const isHovered = item.node.id === hoveredId || item.node.id === highlightedId;
+      const isConnected = Boolean(
+        (hoveredNode && hoveredNode.connections.includes(item.node.id)) ||
+        (highlightedNode && highlightedNode.connections.includes(item.node.id))
+      );
+      const depthAlpha = Math.max(0.35, 1 - (item.z + radius) / (2 * radius));
+      const nodeRadius = isHovered ? 16 : isConnected ? 13 : BASE_RADIUS;
 
-      ctx.save();
       ctx.beginPath();
-      ctx.arc(node.sx, node.sy, r, 0, Math.PI * 2);
-      ctx.clip();
+      ctx.arc(item.sx, item.sy, nodeRadius + (isHovered ? 3 : 1), 0, Math.PI * 2);
+      ctx.fillStyle = isHovered ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.015)';
+      ctx.fill();
 
-      if (node.img && node.img.complete && node.img.naturalWidth > 0) {
-        ctx.drawImage(node.img, node.sx - r, node.sy - r, r * 2, r * 2);
+      if (item.node.img && item.node.img.complete && item.node.img.naturalWidth > 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(item.sx, item.sy, nodeRadius, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(item.node.img, item.sx - nodeRadius, item.sy - nodeRadius, nodeRadius * 2, nodeRadius * 2);
+        ctx.restore();
       } else {
-        ctx.fillStyle = '#253494';
+        ctx.beginPath();
+        ctx.arc(item.sx, item.sy, nodeRadius, 0, Math.PI * 2);
+        ctx.fillStyle = isHovered || isConnected ? HOVER_COLOR : DOT_COLOR;
+        ctx.globalAlpha = depthAlpha;
         ctx.fill();
-        ctx.fillStyle = 'white';
-        ctx.font = `bold ${Math.max(10, r * 0.65)}px Inter, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(
-          node.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase(),
-          node.sx,
-          node.sy
-        );
+        ctx.globalAlpha = 1;
       }
 
       ctx.beginPath();
-      ctx.arc(node.sx, node.sy, r, 0, Math.PI * 2);
-      ctx.strokeStyle = isHighlighted
-        ? 'rgba(74,108,247,0.95)'
-        : 'rgba(200,200,200,0.28)';
-      ctx.lineWidth = isHighlighted ? 2 : 1.1;
+      ctx.arc(item.sx, item.sy, nodeRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = item.node.color;
+      ctx.shadowBlur = isHovered ? 14 : 6;
+      ctx.shadowColor = item.node.color;
+      ctx.globalAlpha = isHovered ? 0.95 : 0.42;
+      ctx.lineWidth = isHovered ? 1.8 : 1;
       ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
 
-      ctx.restore();
+      if (isHovered) {
+        ctx.font = '12px system-ui, -apple-system, Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.fillText(item.node.name, item.sx, item.sy - 18);
+        ctx.font = '10px system-ui, -apple-system, Segoe UI, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.68)';
+        ctx.fillText(`${item.node.connections.length} connections`, item.sx, item.sy - 6);
+      }
     }
 
-    ctx.restore();
-
-    rafRef.current = requestAnimationFrame(tickFn);
+    rafRef.current = requestAnimationFrame(draw);
   }, []);
 
   useEffect(() => {
-    highlightRef.current = highlightSlug ?? null;
-    if (!rafRef.current) rafRef.current = requestAnimationFrame(tick);
-  }, [highlightSlug, tick]);
-
-  useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || members.length === 0) return;
+    const parent = parentRef.current;
+    if (!canvas || !parent) return;
 
-    // Set canvas size
     const resizeCanvas = () => {
-      const rect = canvas.parentElement!.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      sizeRef.current = { w, h, dpr };
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resizeCanvas();
-    hoveredSlugRef.current = null;
-    rotationRef.current = { x: 0.2, y: 0 };
-    frameRef.current = 0;
 
-    // Use a Fibonacci sphere distribution for balanced globe layout.
-    nodesRef.current = members.map((m, i) => {
-      const count = members.length;
-      const y = 1 - (i / Math.max(count - 1, 1)) * 2;
-      const radius = Math.sqrt(1 - y * y);
-      const theta = Math.PI * (3 - Math.sqrt(5)) * i;
-      const x = Math.cos(theta) * radius;
-      const z = Math.sin(theta) * radius;
-      const phi = Math.acos(y);
-      return {
-        slug: m.slug,
-        name: m.name,
-        profilePic: m.profile_pic,
-        theta: Math.atan2(z, x),
-        phi,
-        sx: 0,
-        sy: 0,
-        sz: 0,
-        depthScale: 1,
-      };
-    });
+    const ro = new ResizeObserver(resizeCanvas);
+    ro.observe(parent);
+    window.addEventListener('resize', resizeCanvas);
 
-    const imagePromises = nodesRef.current.map(
-      (node) =>
-        new Promise<void>((resolve) => {
-          if (!node.profilePic) { resolve(); return; }
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => { node.img = img; resolve(); };
-          img.onerror = () => resolve();
-          img.src = node.profilePic;
-          setTimeout(resolve, 2000);
-        })
-    );
+    canvas.style.cursor = 'grab';
+    const onPointerDown = (e: PointerEvent) => {
+      dragRef.current = { active: true, x: e.clientX, y: e.clientY, rotY: rotRef.current.y, rotX: rotRef.current.x };
+      canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = 'grabbing';
+    };
 
-    Promise.all(imagePromises).then(() => {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(tick);
-    });
-
-    const onMove = (event: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      pointerRef.current = {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-      };
-
-      let nearest: { slug: string; d: number } | null = null;
-      for (const node of nodesRef.current) {
-        const r = BASE_NODE_RADIUS * node.depthScale + 8;
-        const dx = node.sx - pointerRef.current.x;
-        const dy = node.sy - pointerRef.current.y;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d <= r && (!nearest || d < nearest.d)) {
-          nearest = { slug: node.slug, d };
-        }
+    const onPointerMove = (e: PointerEvent) => {
+      if (dragRef.current.active) {
+        const dx = e.clientX - dragRef.current.x;
+        const dy = e.clientY - dragRef.current.y;
+        rotRef.current.y = dragRef.current.rotY + dx * 0.0065;
+        rotRef.current.x = Math.max(-1.05, Math.min(1.05, dragRef.current.rotX + dy * 0.0065));
+      } else {
+        hitTest(e.clientX, e.clientY);
       }
-      hoveredSlugRef.current = nearest?.slug ?? null;
     };
 
-    const onLeave = () => {
-      hoveredSlugRef.current = null;
+    const onPointerUp = () => {
+      dragRef.current.active = false;
+      canvas.style.cursor = 'grab';
     };
 
-    canvas.addEventListener('mousemove', onMove);
-    canvas.addEventListener('mouseleave', onLeave);
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointerleave', onPointerUp);
 
-    // ResizeObserver
-    const ro = new ResizeObserver(() => {
-      resizeCanvas();
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(tick);
-    });
-    ro.observe(canvas.parentElement!);
-
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(rafRef.current);
-      canvas.removeEventListener('mousemove', onMove);
-      canvas.removeEventListener('mouseleave', onLeave);
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointerleave', onPointerUp);
       ro.disconnect();
+      window.removeEventListener('resize', resizeCanvas);
     };
-  }, [members, tick]);
+  }, [draw, hitTest]);
 
   return (
     <GlowCard customSize={true} className="graph-container" glowColor="red">
-      <canvas ref={canvasRef} className="graph-canvas" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+      <div ref={parentRef} style={{ position: 'absolute', inset: 0 }}>
+        <canvas ref={canvasRef} className="graph-canvas" />
+      </div>
     </GlowCard>
   );
 }
