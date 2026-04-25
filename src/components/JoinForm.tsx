@@ -8,7 +8,8 @@ import {
   DEPARTMENT_ROLE_SUGGESTIONS,
   type Department,
 } from '@/types/member';
-import { Upload, Loader2, CheckCircle2 } from 'lucide-react';
+import { Upload, CheckCircle2, X } from 'lucide-react';
+
 
 export default function JoinForm() {
   const [isPending, startTransition] = useTransition();
@@ -16,6 +17,8 @@ export default function JoinForm() {
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [photoName, setPhotoName] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoSize, setPhotoSize] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<Department | ''>('');
   const [roles, setRoles] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
@@ -99,7 +102,8 @@ export default function JoinForm() {
       )}
 
       {/* ── Required fields ─────────────────────────── */}
-      <p className="form-section-title">Required</p>
+      <div className="form-section-card">
+        <p className="form-section-title">Required</p>
 
       <div className="form-group">
         <label htmlFor="join-name" className="form-label">
@@ -157,10 +161,11 @@ export default function JoinForm() {
         {fieldError('department')}
       </div>
 
-      <hr className="section-divider" />
+      </div>
 
       {/* ── Optional fields ──────────────────────────── */}
-      <p className="form-section-title">Optional</p>
+      <div className="form-section-card">
+        <p className="form-section-title">Optional</p>
 
       <div className="form-group">
         <label htmlFor="join-member-type" className="form-label">
@@ -315,34 +320,84 @@ export default function JoinForm() {
       {/* Photo upload */}
       <div className="form-group">
         <label className="form-label">Profile Photo</label>
-        <div
-          className={`file-upload-area ${photoName ? 'has-file' : ''}`}
-          onClick={() => fileRef.current?.click()}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && fileRef.current?.click()}
-        >
-          <Upload size={20} color="var(--text-muted)" style={{ marginBottom: 8 }} />
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-            {photoName ? photoName : 'Click to upload a photo'}
-          </p>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-            JPG, PNG or WebP · max 5MB · will be cropped to 400×400
-          </p>
-        </div>
+
+        {photoPreview ? (
+          /* ── Success / preview state ── */
+          <div className="file-upload-preview" id="photo-preview-area">
+            <img
+              src={photoPreview}
+              alt="Profile preview"
+              className="upload-preview-img"
+            />
+            <div className="upload-preview-info">
+              <div className="upload-preview-badge">
+                <CheckCircle2 size={13} />
+                Photo ready
+              </div>
+              <p className="upload-preview-name">{photoName}</p>
+              <p className="upload-preview-size">{photoSize}</p>
+            </div>
+            <button
+              type="button"
+              className="upload-remove-btn"
+              aria-label="Remove photo"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPhotoName(null);
+                setPhotoPreview(null);
+                setPhotoSize(null);
+                if (fileRef.current) fileRef.current.value = '';
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          /* ── Empty / upload state ── */
+          <div
+            className="file-upload-area"
+            onClick={() => fileRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && fileRef.current?.click()}
+          >
+            <Upload size={20} color="var(--text-muted)" style={{ marginBottom: 8 }} />
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+              Click to upload a photo
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              JPG, PNG or WebP · max 5MB · will be cropped to 400×400
+            </p>
+          </div>
+        )}
+
         <input
           ref={fileRef}
           name="photo"
           type="file"
           accept="image/jpeg,image/png,image/webp"
           style={{ display: 'none' }}
-          onChange={(e) => setPhotoName(e.target.files?.[0]?.name ?? null)}
+          onChange={(e) => {
+            const file = e.target.files?.[0] ?? null;
+            if (!file) return;
+            setPhotoName(file.name);
+            setPhotoSize(
+              file.size >= 1024 * 1024
+                ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+                : `${Math.round(file.size / 1024)} KB`
+            );
+            const reader = new FileReader();
+            reader.onload = (ev) => setPhotoPreview(ev.target?.result as string);
+            reader.readAsDataURL(file);
+          }}
         />
       </div>
 
-      <hr className="section-divider" />
+      </div>
 
-      {/* Roles */}
+      {/* ── Roles & Interests ────────────────────────── */}
+      <div className="form-section-card">
+        <p className="form-section-title">Roles &amp; Interests</p>
       <div className="form-group">
         <label htmlFor="join-role-input" className="form-label">
           Roles <span className="form-hint">(choose a suggestion or write your own)</span>
@@ -452,10 +507,11 @@ export default function JoinForm() {
         ))}
       </div>
 
-      <hr className="section-divider" />
+      </div>
 
-      {/* Social links */}
-      <p className="form-section-title">Social Links</p>
+      {/* ── Social links ─────────────────────────────── */}
+      <div className="form-section-card">
+        <p className="form-section-title">Social Links</p>
 
       {[
         { id: 'join-github', name: 'github', label: 'GitHub', placeholder: 'https://github.com/username' },
@@ -476,20 +532,23 @@ export default function JoinForm() {
         </div>
       ))}
 
+      </div>
+
       <button
         type="submit"
-        className="btn btn-primary"
+        className="btn btn-submit"
         disabled={isPending}
         id="join-submit-btn"
-        style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}
       >
         {isPending ? (
           <>
-            <Loader2 size={16} className="spin" /> Submitting...
+            <span className="btn-spinner" />
+            <span>Submitting…</span>
           </>
         ) : (
           <>
-            <CheckCircle2 size={16} /> Submit Application
+            <CheckCircle2 size={15} />
+            <span>Submit Application</span>
           </>
         )}
       </button>

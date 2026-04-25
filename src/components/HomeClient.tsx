@@ -47,14 +47,15 @@ export default function HomeClient({ members, showConfigHint, showTimeoutHint }:
 
       <div className="main-grid">
         {/* Left column */}
-        <div className="left-col">
+        <div className="left-col panel-card">
           <MemberTable members={members} onHover={setHoveredSlug} />
         </div>
 
         {/* Right column */}
         <aside className="right-col">
-          <NetworkGraph members={members} highlightSlug={hoveredSlug} />
-
+          <div className="panel-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <NetworkGraph members={members} highlightSlug={hoveredSlug} />
+          </div>
           <p
             className="text-muted"
             style={{ fontSize: 11, marginTop: 10, textAlign: 'center' }}

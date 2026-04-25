@@ -3,8 +3,10 @@
 import { z } from 'zod';
 import slugify from 'slugify';
 import sharp from 'sharp';
+import { headers } from 'next/headers';
 import { getAdminClient } from '@/lib/supabase/admin-server';
 import { DEPARTMENT_OPTIONS } from '@/types/member';
+import { rateLimit } from '@/lib/rate-limit';
 
 const memberSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
@@ -78,11 +80,35 @@ export type JoinActionResult =
   | { error: string | Record<string, string[]> };
 
 export async function submitJoinRequest(formData: FormData): Promise<JoinActionResult> {
+  // ── Rate limiting (defence-in-depth — also enforced in middleware) ────
+  const headersList = await headers();
+  const ip =
+    headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    headersList.get('x-real-ip') ??
+    'anonymous';
+
+  const rl = rateLimit(`join-action:${ip}`, { limit: 5, windowMs: 60_000 });
+  if (!rl.allowed) {
+    return { error: 'Too many submissions. Please wait a moment and try again.' };
+  }
+
   const admin = getAdminClient();
 
-  // Collect roles and interests (multi-value checkboxes)
-  const roles = formData.getAll('roles') as string[];
-  const interests = formData.getAll('interests') as string[];
+  // Collect roles and interests — sanitize: cap count, cap length, strip whitespace
+  const MAX_TAGS = 10;
+  const MAX_TAG_LEN = 60;
+  const sanitizeTag = (t: unknown) =>
+    typeof t === 'string' ? t.trim().slice(0, MAX_TAG_LEN) : null;
+
+  const roles = (formData.getAll('roles') as string[])
+    .slice(0, MAX_TAGS)
+    .map(sanitizeTag)
+    .filter((t): t is string => !!t && t.length > 0);
+
+  const interests = (formData.getAll('interests') as string[])
+    .slice(0, MAX_TAGS)
+    .map(sanitizeTag)
+    .filter((t): t is string => !!t && t.length > 0);
 
   // Validate text fields
   const raw = Object.fromEntries(formData.entries());

@@ -35,7 +35,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        {children}
+        <footer className="site-footer">
+          <span className="site-footer-motto">by the BRACU people, for the BRACU people</span>
+          <span className="site-footer-sep">·</span>
+          <span>© {new Date().getFullYear()} bracu.network</span>
+        </footer>
+      </body>
     </html>
   );
 }

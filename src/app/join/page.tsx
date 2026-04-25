@@ -11,8 +11,8 @@ export default function JoinPage() {
   return (
     <main className="join-wrapper">
       <div className="join-header">
-        <Link href="/" style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24, display: 'inline-block' }}>
-          ← bracu.network
+        <Link href="/" className="btn-back">
+          <span className="btn-back-arrow">←</span>
         </Link>
         <h1 className="join-title">Join the network</h1>
         <p className="join-subtitle">
