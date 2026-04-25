@@ -13,7 +13,7 @@ const memberSchema = z.object({
   member_type: z.enum(['student', 'alumni'], { error: 'Select whether you are a student or alumni' }),
   student_id: z
     .string()
-    .regex(/^20\d{7}$/, 'Student ID must match 20XXXXXXX format'),
+    .regex(/^2/, 'Student ID must start with 2'),
   website: z
     .string()
     .url('Must be a valid URL')

@@ -195,7 +195,7 @@ export default function JoinForm() {
           name="student_id"
           type="text"
           className="form-input"
-          placeholder="20XXXXXXX"
+          placeholder="2XXXXXXXX"
           required
         />
         {fieldError('student_id')}
