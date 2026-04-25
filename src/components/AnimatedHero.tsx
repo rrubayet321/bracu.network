@@ -6,43 +6,45 @@ export default function AnimatedHero() {
   return (
     <div className="animated-hero-wrapper">
       <div className="animated-hero-svg-container">
-        <svg viewBox="0 0 800 350" preserveAspectRatio="xMidYMid meet" className="animated-hero-svg">
+        <svg
+          viewBox="0 0 800 220"
+          preserveAspectRatio="xMidYMid meet"
+          className="animated-hero-svg"
+          aria-hidden="true"
+        >
           {/* Base lines */}
-          <path d="M 100 60 C 100 180, 400 130, 400 250" fill="none" stroke="#2a2c30" strokeWidth="2" />
-          <path d="M 300 60 C 300 180, 400 130, 400 250" fill="none" stroke="#2a2c30" strokeWidth="2" />
-          <path d="M 500 60 C 500 180, 400 130, 400 250" fill="none" stroke="#2a2c30" strokeWidth="2" />
-          <path d="M 700 60 C 700 180, 400 130, 400 250" fill="none" stroke="#2a2c30" strokeWidth="2" />
+          <path d="M 100 52 C 100 150, 400 120, 400 200" fill="none" stroke="#2a2c30" strokeWidth="2" />
+          <path d="M 300 52 C 300 150, 400 120, 400 200" fill="none" stroke="#2a2c30" strokeWidth="2" />
+          <path d="M 500 52 C 500 150, 400 120, 400 200" fill="none" stroke="#2a2c30" strokeWidth="2" />
+          <path d="M 700 52 C 700 150, 400 120, 400 200" fill="none" stroke="#2a2c30" strokeWidth="2" />
 
           {/* Energy Beams */}
-          <path className="energy-beam" d="M 100 60 C 100 180, 400 130, 400 250" fill="none" stroke="#4a6cf7" strokeWidth="3" pathLength="100" strokeDasharray="10 150" strokeLinecap="round" filter="drop-shadow(0 0 6px #4a6cf7)" />
-          <path className="energy-beam" d="M 300 60 C 300 180, 400 130, 400 250" fill="none" stroke="#4a6cf7" strokeWidth="3" pathLength="100" strokeDasharray="10 150" strokeLinecap="round" filter="drop-shadow(0 0 6px #4a6cf7)" />
-          <path className="energy-beam" d="M 500 60 C 500 180, 400 130, 400 250" fill="none" stroke="#4a6cf7" strokeWidth="3" pathLength="100" strokeDasharray="10 150" strokeLinecap="round" filter="drop-shadow(0 0 6px #4a6cf7)" />
-          <path className="energy-beam" d="M 700 60 C 700 180, 400 130, 400 250" fill="none" stroke="#4a6cf7" strokeWidth="3" pathLength="100" strokeDasharray="10 150" strokeLinecap="round" filter="drop-shadow(0 0 6px #4a6cf7)" />
+          <path className="energy-beam" d="M 100 52 C 100 150, 400 120, 400 200" fill="none" stroke="#4a6cf7" strokeWidth="3" pathLength="100" strokeDasharray="10 150" strokeLinecap="round" filter="drop-shadow(0 0 6px #4a6cf7)" />
+          <path className="energy-beam" d="M 300 52 C 300 150, 400 120, 400 200" fill="none" stroke="#4a6cf7" strokeWidth="3" pathLength="100" strokeDasharray="10 150" strokeLinecap="round" filter="drop-shadow(0 0 6px #4a6cf7)" />
+          <path className="energy-beam" d="M 500 52 C 500 150, 400 120, 400 200" fill="none" stroke="#4a6cf7" strokeWidth="3" pathLength="100" strokeDasharray="10 150" strokeLinecap="round" filter="drop-shadow(0 0 6px #4a6cf7)" />
+          <path className="energy-beam" d="M 700 52 C 700 150, 400 120, 400 200" fill="none" stroke="#4a6cf7" strokeWidth="3" pathLength="100" strokeDasharray="10 150" strokeLinecap="round" filter="drop-shadow(0 0 6px #4a6cf7)" />
 
-          {/* Top Boxes (Roles) */}
-          <foreignObject x="30" y="20" width="140" height="40">
-            <div className="role-box">DESIGNERS</div>
-          </foreignObject>
-          <foreignObject x="230" y="20" width="140" height="40">
-            <div className="role-box">ENGINEERS</div>
-          </foreignObject>
-          <foreignObject x="430" y="20" width="140" height="40">
-            <div className="role-box">RESEARCHERS</div>
-          </foreignObject>
-          <foreignObject x="630" y="20" width="140" height="40">
-            <div className="role-box">FOUNDERS</div>
-          </foreignObject>
+          {/* Role boxes — pure SVG (no foreignObject, works on all browsers/mobile) */}
+          <rect x="22"  y="10" width="156" height="36" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+          <text x="100" y="33" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="12" fontFamily="-apple-system,BlinkMacSystemFont,'Inter',sans-serif" fontWeight="500" letterSpacing="0.06em">DESIGNERS</text>
 
-          {/* Main Title Box */}
-          <foreignObject x="0" y="240" width="800" height="100">
-            <div className="hero-main-title-box">
-              <h1 className="hero-title">bracu.network</h1>
-            </div>
-          </foreignObject>
+          <rect x="222" y="10" width="156" height="36" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+          <text x="300" y="33" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="12" fontFamily="-apple-system,BlinkMacSystemFont,'Inter',sans-serif" fontWeight="500" letterSpacing="0.06em">ENGINEERS</text>
+
+          <rect x="422" y="10" width="156" height="36" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+          <text x="500" y="33" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="12" fontFamily="-apple-system,BlinkMacSystemFont,'Inter',sans-serif" fontWeight="500" letterSpacing="0.06em">RESEARCHERS</text>
+
+          <rect x="622" y="10" width="156" height="36" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+          <text x="700" y="33" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="12" fontFamily="-apple-system,BlinkMacSystemFont,'Inter',sans-serif" fontWeight="500" letterSpacing="0.06em">FOUNDERS</text>
+
+          {/* Focal glow dot where beams converge */}
+          <circle cx="400" cy="200" r="4" fill="#4a6cf7" filter="drop-shadow(0 0 8px #4a6cf7)" opacity="0.9" />
         </svg>
       </div>
 
+      {/* Title + text sit OUTSIDE the SVG — scales with CSS, not SVG transforms */}
       <div className="hero-text-content">
+        <h1 className="hero-title">bracu.network</h1>
         <p className="hero-description">
           A home for the most ambitious builders, thinkers, and creators from the
           BRAC University community. Connecting us all to build the future together.

@@ -138,14 +138,16 @@ a:hover { color: var(--text-primary); }
 
 .animated-hero-svg-container {
   width: 100%;
-  max-width: 600px;
-  margin-bottom: -10px; /* Pull text up slightly */
+  max-width: 640px;
+  overflow: visible;
+  margin-bottom: 0;
 }
 
 .animated-hero-svg {
   width: 100%;
   height: auto;
   overflow: visible;
+  display: block;
 }
 
 .role-box {
@@ -1267,10 +1269,11 @@ a:hover { color: var(--text-primary); }
   /* ── Hero ───────────────────────────────────────── */
   .animated-hero-svg-container {
     max-width: 100%;
+    overflow: visible;
   }
 
   .hero-title {
-    font-size: clamp(2rem, 10vw, 2.6rem);
+    font-size: clamp(2.4rem, 11vw, 3rem);
     margin-bottom: 10px;
   }
 

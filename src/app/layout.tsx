@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Image from 'next/image';
+import Analytics from '@/components/Analytics';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -37,7 +38,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className={inter.className}>
-        {children}
+          <Analytics />
+          {children}
         <footer className="site-footer">
           <Image
             src="/minimal-flat-b-and-n-should-be-inside-b--deep-navy.svg"
