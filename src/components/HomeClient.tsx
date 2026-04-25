@@ -10,9 +10,7 @@ const NetworkGraph = dynamic(() => import('@/components/NetworkGraph'), { ssr: f
 
 interface HomeClientProps {
   members: Member[];
-  /** Shown in dev when .env.local is missing real Supabase keys (avoids a hung blank page). */
   showConfigHint?: boolean;
-  /** Supabase did not answer in time; page still loads with empty data. */
   showTimeoutHint?: boolean;
 }
 
@@ -41,6 +39,7 @@ export default function HomeClient({ members, showConfigHint, showTimeoutHint }:
           so the directory can load. The UI works with an empty list until then.
         </div>
       )}
+
       <header className="hero" style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: 60 }}>
         <AnimatedHero />
       </header>

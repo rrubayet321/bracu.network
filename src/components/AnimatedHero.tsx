@@ -21,24 +21,16 @@ export default function AnimatedHero() {
 
           {/* Top Boxes (Roles) */}
           <foreignObject x="30" y="20" width="140" height="40">
-            <div className="role-box">
-              DESIGNERS
-            </div>
+            <div className="role-box">DESIGNERS</div>
           </foreignObject>
           <foreignObject x="230" y="20" width="140" height="40">
-            <div className="role-box">
-              ENGINEERS
-            </div>
+            <div className="role-box">ENGINEERS</div>
           </foreignObject>
           <foreignObject x="430" y="20" width="140" height="40">
-            <div className="role-box">
-              RESEARCHERS
-            </div>
+            <div className="role-box">RESEARCHERS</div>
           </foreignObject>
           <foreignObject x="630" y="20" width="140" height="40">
-            <div className="role-box">
-              FOUNDERS
-            </div>
+            <div className="role-box">FOUNDERS</div>
           </foreignObject>
 
           {/* Main Title Box */}

@@ -115,10 +115,7 @@ a:hover { color: var(--text-primary); }
   .page-wrapper { padding: 24px 16px; }
 }
 
-/* ─── Hero ───────────────────────────────────────────────────────────── */
-.hero {
-  margin-bottom: 40px;
-}
+
 
 /* ─── Animated Hero (Tree Structure) ─────────────────────────────────── */
 @keyframes beamTravel {
@@ -189,6 +186,7 @@ a:hover { color: var(--text-primary); }
   color: #ffffff;
   letter-spacing: -0.04em;
   margin-bottom: 14px;
+  text-align: center;
   text-shadow:
     0 0 20px rgba(94, 106, 210, 0.4),
     0 0 40px rgba(94, 106, 210, 0.2);
@@ -418,27 +416,28 @@ a:hover { color: var(--text-primary); }
 }
 
 .member-avatar {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-full);
   object-fit: cover;
   flex-shrink: 0;
-  border: 1px solid var(--border);
+  border: 1.5px solid rgba(255,255,255,0.12);
 }
 
 .member-avatar-fallback {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-full);
   background: var(--bracu-blue-dim);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: white;
   flex-shrink: 0;
-  border: 1px solid var(--border);
+  border: 1.5px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.02em;
 }
 
 .member-name {
@@ -1251,3 +1250,195 @@ a:hover { color: var(--text-primary); }
 .mb-4 { margin-bottom: 16px; }
 .mb-6 { margin-bottom: 24px; }
 .mb-8 { margin-bottom: 32px; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE OVERRIDES
+   Breakpoints: 640px (tablet/large phone) · 480px (phone)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+
+  /* ── Page shell ─────────────────────────────────── */
+  .page-wrapper {
+    padding: 20px 16px 40px;
+  }
+
+  /* ── Hero ───────────────────────────────────────── */
+  .animated-hero-svg-container {
+    max-width: 100%;
+  }
+
+  .hero-title {
+    font-size: clamp(2rem, 10vw, 2.6rem);
+    margin-bottom: 10px;
+  }
+
+  .hero-description {
+    font-size: 13px;
+    max-width: 100%;
+  }
+
+  .hero-cta {
+    font-size: 14px;
+    margin-top: 16px;
+  }
+
+  .animated-hero-wrapper {
+    margin-bottom: 28px;
+  }
+
+  /* ── Main grid — already collapses at 900px,
+     but on phone remove the panel padding ─────────── */
+  .panel-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  /* ── Member table ───────────────────────────────── */
+  /* Hide department + site columns on small screens
+     (too cramped — keep name, links) */
+  .member-table thead th:nth-child(2),
+  .member-table thead th:nth-child(3),
+  .member-table tbody td:nth-child(2),
+  .member-table tbody td:nth-child(3) {
+    display: none;
+  }
+
+  .member-table td {
+    padding: 12px 8px;
+  }
+
+  .member-name {
+    font-size: 13px;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  /* ── Filter dropdown ────────────────────────────── */
+  .filter-dropdown-panel {
+    min-width: 0;
+    width: calc(100vw - 32px);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Search bar ─────────────────────────────────── */
+  .search-bar-wrapper {
+    flex-wrap: wrap;
+  }
+
+  .search-input-container {
+    width: 100%;
+  }
+
+  /* ── Join page ──────────────────────────────────── */
+  .join-wrapper {
+    padding: 20px 16px 60px;
+  }
+
+  .join-header {
+    margin-bottom: 24px;
+  }
+
+  .join-title {
+    font-size: clamp(1.6rem, 8vw, 2.2rem);
+  }
+
+  .form-section-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .tag-input-row {
+    flex-direction: column;
+  }
+
+  .tag-input-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-back {
+    left: 0;
+  }
+
+  /* ── Admin ──────────────────────────────────────── */
+  .admin-wrapper {
+    padding: 20px 16px;
+  }
+
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .admin-card {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .admin-card-actions {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .admin-card-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* ── Login card ─────────────────────────────────── */
+  .login-wrapper {
+    padding: 24px 16px;
+  }
+
+  .login-card {
+    padding: 24px 20px;
+    max-width: 100%;
+  }
+
+  /* ── Footer ─────────────────────────────────────── */
+  .site-footer {
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+    padding: 16px 16px 24px;
+  }
+
+  .site-footer-sep {
+    display: none;
+  }
+
+  /* ── Success card ───────────────────────────────── */
+  .success-wrapper {
+    padding: 24px 16px;
+  }
+
+  .success-card {
+    padding: 28px 20px;
+  }
+}
+
+/* Slightly wider phones / small tablets */
+@media (max-width: 480px) {
+  /* Role boxes in hero — shrink font */
+  .role-box {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+
+  /* Upload preview filename truncation */
+  .upload-preview-name {
+    max-width: 180px;
+  }
+
+  /* Social icons — tighter */
+  .social-icons {
+    gap: 6px;
+  }
+}

@@ -26,28 +26,17 @@ interface RateLimitResult {
 // In-memory store: key → sorted array of request timestamps
 const store = new Map<string, number[]>();
 
-// Prune stale keys every 10 minutes to prevent unbounded memory growth
-if (typeof setInterval !== 'undefined') {
-  setInterval(
-    () => {
-      const now = Date.now();
-      for (const [key, timestamps] of store.entries()) {
-        // If the most recent request is older than 1 hour, evict the key
-        if (timestamps.length === 0 || now - timestamps[timestamps.length - 1] > 3_600_000) {
-          store.delete(key);
-        }
-      }
-    },
-    10 * 60 * 1000
-  );
-}
-
 export function rateLimit(key: string, { limit, windowMs }: RateLimitOptions): RateLimitResult {
   const now = Date.now();
   const windowStart = now - windowMs;
 
-  // Get existing timestamps and drop those outside the current window
+  // Get existing timestamps, drop those outside the current window
   const timestamps = (store.get(key) ?? []).filter((t) => t > windowStart);
+
+  // Inline housekeeping: if this key is idle (no recent hits), evict it
+  if (timestamps.length === 0) {
+    store.delete(key);
+  }
 
   if (timestamps.length >= limit) {
     return {

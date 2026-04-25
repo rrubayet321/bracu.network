@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import Image from 'next/image';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -38,6 +39,14 @@ export default function RootLayout({
       <body className={inter.className}>
         {children}
         <footer className="site-footer">
+          <Image
+            src="/minimal-flat-b-and-n-should-be-inside-b--deep-navy.svg"
+            alt="bracu.network"
+            width={22}
+            height={22}
+            style={{ borderRadius: 5, opacity: 0.7 }}
+          />
+          <span className="site-footer-sep">·</span>
           <span className="site-footer-motto">by the BRACU people, for the BRACU people</span>
           <span className="site-footer-sep">·</span>
           <span>© {new Date().getFullYear()} bracu.network</span>
