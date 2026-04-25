@@ -12,6 +12,8 @@ interface FilterState {
   roles: string[];
 }
 
+type MemberTypeFilter = 'all' | 'student' | 'alumni';
+
 interface MemberTableProps {
   members: Member[];
   onHover?: (slug: string | null) => void;
@@ -33,6 +35,7 @@ function stripProtocol(url: string) {
 export default function MemberTable({ members, onHover }: MemberTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>({ departments: [], roles: [] });
+  const [memberTypeFilter, setMemberTypeFilter] = useState<MemberTypeFilter>('all');
 
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -54,9 +57,12 @@ export default function MemberTable({ members, onHover }: MemberTableProps) {
         filters.roles.length === 0 ||
         m.roles.some((r) => filters.roles.includes(r));
 
-      return matchesQuery && matchesDept && matchesRole;
+      const matchesMemberType =
+        memberTypeFilter === 'all' || m.member_type === memberTypeFilter;
+
+      return matchesQuery && matchesDept && matchesRole && matchesMemberType;
     });
-  }, [members, searchQuery, filters]);
+  }, [members, searchQuery, filters, memberTypeFilter]);
 
   return (
     <div>
@@ -75,6 +81,16 @@ export default function MemberTable({ members, onHover }: MemberTableProps) {
           />
         </div>
         <FilterDropdown filters={filters} onChange={setFilters} />
+        <select
+          className="filter-member-type-select"
+          value={memberTypeFilter}
+          onChange={(e) => setMemberTypeFilter(e.target.value as MemberTypeFilter)}
+          aria-label="Filter by member type"
+        >
+          <option value="all">all members</option>
+          <option value="student">students</option>
+          <option value="alumni">alumni</option>
+        </select>
       </div>
 
       {/* Table */}
@@ -82,6 +98,7 @@ export default function MemberTable({ members, onHover }: MemberTableProps) {
         {filtered.length === 0 ? (
           <div className="empty-state">
             {searchQuery || filters.departments.length || filters.roles.length
+              || memberTypeFilter !== 'all'
               ? 'No members match your search.'
               : 'No members yet. Be the first to join!'}
           </div>

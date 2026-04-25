@@ -300,6 +300,30 @@ a:hover { color: var(--text-primary); }
   transform: translateY(-1px);
 }
 
+.filter-member-type-select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 10px 12px;
+  min-width: 130px;
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition);
+}
+
+.filter-member-type-select:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.filter-member-type-select:focus {
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 3px var(--bracu-blue-glow);
+}
+
 .filter-badge {
   background: var(--accent);
   color: white;
