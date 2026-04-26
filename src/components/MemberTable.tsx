@@ -10,6 +10,7 @@ import { Search } from 'lucide-react';
 interface FilterState {
   departments: string[];
   roles: string[];
+  openToHire: boolean;
 }
 
 type MemberTypeFilter = 'all' | 'student' | 'alumni';
@@ -35,7 +36,7 @@ function stripProtocol(url: string) {
 
 export default function MemberTable({ members, onHover, highlightSlug }: MemberTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<FilterState>({ departments: [], roles: [] });
+  const [filters, setFilters] = useState<FilterState>({ departments: [], roles: [], openToHire: false });
   const [memberTypeFilter, setMemberTypeFilter] = useState<MemberTypeFilter>('all');
 
   const filtered = useMemo(() => {
@@ -46,7 +47,8 @@ export default function MemberTable({ members, onHover, highlightSlug }: MemberT
         !q ||
         m.name.toLowerCase().includes(q) ||
         m.department?.toLowerCase().includes(q) ||
-        (m.website?.toLowerCase().includes(q) ?? false);
+        (m.website?.toLowerCase().includes(q) ?? false) ||
+        m.roles.some((r) => r.toLowerCase().includes(q));
 
       // Department filter
       const matchesDept =
@@ -61,7 +63,9 @@ export default function MemberTable({ members, onHover, highlightSlug }: MemberT
       const matchesMemberType =
         memberTypeFilter === 'all' || m.member_type === memberTypeFilter;
 
-      return matchesQuery && matchesDept && matchesRole && matchesMemberType;
+      const matchesOpenToHire = !filters.openToHire || m.open_to_hire === true;
+
+      return matchesQuery && matchesDept && matchesRole && matchesMemberType && matchesOpenToHire;
     });
   }, [members, searchQuery, filters, memberTypeFilter]);
 
@@ -75,7 +79,7 @@ export default function MemberTable({ members, onHover, highlightSlug }: MemberT
             id="member-search"
             className="search-input"
             type="text"
-            placeholder="search by name, department, or site..."
+            placeholder="search by name, department, role, or site..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             autoComplete="off"
@@ -99,7 +103,7 @@ export default function MemberTable({ members, onHover, highlightSlug }: MemberT
         {filtered.length === 0 ? (
           <div className="empty-state">
             {searchQuery || filters.departments.length || filters.roles.length
-              || memberTypeFilter !== 'all'
+              || filters.openToHire || memberTypeFilter !== 'all'
               ? 'No members match your search.'
               : 'No members yet. Be the first to join!'}
           </div>
@@ -147,7 +151,15 @@ export default function MemberTable({ members, onHover, highlightSlug }: MemberT
                       {member.member_type === 'student' && (
                         <span className="member-type-badge">current</span>
                       )}
+                      {member.open_to_hire && (
+                        <span className="member-type-badge open-to-hire" title="Open to opportunities">open to hire</span>
+                      )}
                     </div>
+                    {member.roles?.length > 0 && (
+                      <div className="member-roles">
+                        {member.roles.slice(0, 3).join(' · ')}
+                      </div>
+                    )}
                   </td>
 
                   {/* Department */}

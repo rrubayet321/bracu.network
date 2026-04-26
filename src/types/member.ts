@@ -18,6 +18,7 @@ export interface Member {
   batch?: string;
   roles: string[];
   interests: string[];
+  open_to_hire?: boolean;
   profile_pic?: string;
   instagram?: string;
   twitter?: string;
@@ -30,17 +31,53 @@ export interface Member {
 }
 
 export const ROLE_OPTIONS = [
-  'engineering',
-  'design',
-  'product',
-  'ai/ml',
-  'research',
-  'data science',
-  'cybersecurity',
-  'mobile dev',
-  'game dev',
-  'entrepreneurship',
-  'content creation',
+  // Engineering & Tech
+  'software engineer',
+  'frontend developer',
+  'backend developer',
+  'full-stack developer',
+  'mobile developer',
+  'ai/ml engineer',
+  'data scientist',
+  'data analyst',
+  'devops engineer',
+  'cybersecurity analyst',
+  'embedded systems engineer',
+  'iot developer',
+  'robotics engineer',
+  'game developer',
+  // Design & Creative
+  'ui/ux designer',
+  'graphic designer',
+  'product designer',
+  'architectural designer',
+  '3d visualizer',
+  'content creator',
+  'technical writer',
+  'communications specialist',
+  // Business & Management
+  'product manager',
+  'project manager',
+  'business analyst',
+  'marketing strategist',
+  'entrepreneur',
+  'startup founder',
+  // Research & Science
+  'researcher',
+  'policy analyst',
+  'public health researcher',
+  'biotech researcher',
+  'lab analyst',
+  'clinical researcher',
+  'quantitative analyst',
+  'bioinformatics engineer',
+  // Legal & Policy
+  'legal researcher',
+  'compliance analyst',
+  'policy advocate',
+  // Other
+  'economics researcher',
+  'development practitioner',
 ] as const;
 
 export type Role = (typeof ROLE_OPTIONS)[number];
@@ -83,18 +120,18 @@ export const INTEREST_OPTIONS = [
 export type Interest = (typeof INTEREST_OPTIONS)[number];
 
 export const DEPARTMENT_ROLE_SUGGESTIONS: Record<Department, string[]> = {
-  Architecture: ['architectural designer', 'urban designer', '3d visualizer', 'interior designer'],
-  Biotechnology: ['biotech researcher', 'lab analyst', 'bioinformatics learner', 'quality assurance intern'],
-  'BRAC Business School': ['product manager', 'business analyst', 'marketing strategist', 'entrepreneur'],
-  'BRAC James P Grant School of Public Health': ['public health researcher', 'policy analyst', 'health communicator', 'epidemiology learner'],
-  'Computer Science and Engineering': ['software engineer', 'frontend developer', 'backend developer', 'ai/ml engineer'],
-  'Economics and Social Sciences': ['economics researcher', 'policy analyst', 'development practitioner', 'data analyst'],
-  'Electrical and Electronic Engineering': ['embedded systems engineer', 'robotics builder', 'power systems learner', 'iot developer'],
-  'English and Humanities': ['content strategist', 'technical writer', 'communications specialist', 'research assistant'],
-  'Mathematics and Natural Sciences': ['data scientist', 'quantitative analyst', 'research assistant', 'math tutor'],
-  Microbiology: ['microbiology researcher', 'lab assistant', 'quality control analyst', 'clinical research intern'],
-  Pharmacy: ['pharmacy intern', 'clinical researcher', 'drug safety analyst', 'healthcare content writer'],
-  'School of Law': ['legal researcher', 'policy advocate', 'compliance analyst', 'legal consultant'],
+  Architecture: ['architectural designer', '3d visualizer', 'product designer', 'ui/ux designer', 'project manager', 'content creator'],
+  Biotechnology: ['biotech researcher', 'lab analyst', 'bioinformatics engineer', 'data analyst', 'clinical researcher', 'public health researcher'],
+  'BRAC Business School': ['product manager', 'business analyst', 'marketing strategist', 'entrepreneur', 'startup founder', 'data analyst', 'project manager'],
+  'BRAC James P Grant School of Public Health': ['public health researcher', 'policy analyst', 'researcher', 'data analyst', 'communications specialist', 'development practitioner'],
+  'Computer Science and Engineering': ['software engineer', 'frontend developer', 'backend developer', 'full-stack developer', 'ai/ml engineer', 'mobile developer', 'data scientist', 'devops engineer', 'cybersecurity analyst', 'game developer', 'product manager'],
+  'Economics and Social Sciences': ['economics researcher', 'policy analyst', 'data analyst', 'development practitioner', 'business analyst', 'researcher'],
+  'Electrical and Electronic Engineering': ['embedded systems engineer', 'iot developer', 'robotics engineer', 'software engineer', 'data analyst', 'devops engineer'],
+  'English and Humanities': ['technical writer', 'content creator', 'communications specialist', 'researcher', 'policy analyst', 'marketing strategist'],
+  'Mathematics and Natural Sciences': ['data scientist', 'quantitative analyst', 'researcher', 'ai/ml engineer', 'data analyst', 'bioinformatics engineer'],
+  Microbiology: ['lab analyst', 'clinical researcher', 'biotech researcher', 'public health researcher', 'researcher', 'data analyst'],
+  Pharmacy: ['clinical researcher', 'lab analyst', 'public health researcher', 'researcher', 'data analyst', 'compliance analyst'],
+  'School of Law': ['legal researcher', 'policy advocate', 'compliance analyst', 'policy analyst', 'researcher', 'communications specialist'],
 };
 
 export const DEPARTMENT_INTEREST_SUGGESTIONS: Record<Department, string[]> = {

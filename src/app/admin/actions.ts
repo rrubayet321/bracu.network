@@ -24,7 +24,7 @@ async function requireAdmin(): Promise<{ id: string }> {
 }
 
 export async function approveMember(id: string) {
-  try { await requireAdmin(); } catch { return { error: 'Not authenticated' }; }
+  try { await requireAdmin(); } catch (e) { return { error: e instanceof Error ? e.message : 'Not authenticated' }; }
 
   const admin = getAdminClient();
   const { error } = await admin
@@ -43,7 +43,7 @@ export async function approveMember(id: string) {
 }
 
 export async function rejectMember(id: string) {
-  try { await requireAdmin(); } catch { return { error: 'Not authenticated' }; }
+  try { await requireAdmin(); } catch (e) { return { error: e instanceof Error ? e.message : 'Not authenticated' }; }
 
   const admin = getAdminClient();
   const { error } = await admin
@@ -61,7 +61,7 @@ export async function rejectMember(id: string) {
 }
 
 export async function removeMember(id: string) {
-  try { await requireAdmin(); } catch { return { error: 'Not authenticated' }; }
+  try { await requireAdmin(); } catch (e) { return { error: e instanceof Error ? e.message : 'Not authenticated' }; }
 
   const admin = getAdminClient();
   const { error } = await admin
@@ -80,7 +80,7 @@ export async function removeMember(id: string) {
 }
 
 export async function setMemberType(id: string, type: 'student' | 'alumni') {
-  try { await requireAdmin(); } catch { return { error: 'Not authenticated' }; }
+  try { await requireAdmin(); } catch (e) { return { error: e instanceof Error ? e.message : 'Not authenticated' }; }
 
   const admin = getAdminClient();
   const { error } = await admin

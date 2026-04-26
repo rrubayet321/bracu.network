@@ -44,6 +44,7 @@ const memberSchema = z.object({
     .or(z.literal('')),
   alumni_work_sector: z.enum(['academia', 'industry']).optional().or(z.literal('')),
   alumni_field_alignment: z.enum(['own_field', 'other_field']).optional().or(z.literal('')),
+  open_to_hire: z.enum(['true']).optional(),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   bracu_email: z
     .string()
@@ -213,6 +214,7 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
     expected_graduation_semester: data.expected_graduation_semester || null,
     ...(data.alumni_work_sector ? { alumni_work_sector: data.alumni_work_sector } : {}),
     ...(data.alumni_field_alignment ? { alumni_field_alignment: data.alumni_field_alignment } : {}),
+    open_to_hire: data.open_to_hire === 'true',
     email: data.email || null,
     bracu_email: data.bracu_email || null,
     instagram: data.instagram || null,

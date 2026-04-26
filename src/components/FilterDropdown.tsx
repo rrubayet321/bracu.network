@@ -7,6 +7,7 @@ import { DEPARTMENT_OPTIONS, ROLE_OPTIONS } from '@/types/member';
 interface FilterState {
   departments: string[];
   roles: string[];
+  openToHire: boolean;
 }
 
 interface FilterDropdownProps {
@@ -18,7 +19,7 @@ export default function FilterDropdown({ filters, onChange }: FilterDropdownProp
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const activeCount = filters.departments.length + filters.roles.length;
+  const activeCount = filters.departments.length + filters.roles.length + (filters.openToHire ? 1 : 0);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -45,7 +46,7 @@ export default function FilterDropdown({ filters, onChange }: FilterDropdownProp
   }
 
   function clearAll() {
-    onChange({ departments: [], roles: [] });
+    onChange({ departments: [], roles: [], openToHire: false });
   }
 
   return (
@@ -96,19 +97,34 @@ export default function FilterDropdown({ filters, onChange }: FilterDropdownProp
             ))}
           </div>
 
+          {/* Open to hire */}
+          <div className="filter-section" style={{ gridColumn: '1 / -1' }}>
+            <div className="filter-section-title">Availability</div>
+            <label className="filter-checkbox-label">
+              <input
+                type="checkbox"
+                checked={filters.openToHire}
+                onChange={() => onChange({ ...filters, openToHire: !filters.openToHire })}
+              />
+              Open to hire / opportunities
+            </label>
+          </div>
+
           {/* Roles */}
-          <div className="filter-section">
+          <div className="filter-section" style={{ gridColumn: '1 / -1' }}>
             <div className="filter-section-title">Role</div>
-            {ROLE_OPTIONS.map((role) => (
-              <label key={role} className="filter-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={filters.roles.includes(role)}
-                  onChange={() => toggleRole(role)}
-                />
-                {role}
-              </label>
-            ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 16px' }}>
+              {ROLE_OPTIONS.map((role) => (
+                <label key={role} className="filter-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={filters.roles.includes(role)}
+                    onChange={() => toggleRole(role)}
+                  />
+                  {role}
+                </label>
+              ))}
+            </div>
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ import {
   DEPARTMENT_OPTIONS,
   DEPARTMENT_INTEREST_SUGGESTIONS,
   DEPARTMENT_ROLE_SUGGESTIONS,
+  ROLE_OPTIONS,
   type Department,
 } from '@/types/member';
 import { Upload, CheckCircle2, X, Check } from 'lucide-react';
@@ -98,6 +99,7 @@ export default function JoinForm() {
   const [interests, setInterests] = useState<string[]>([]);
   const [roleDraft, setRoleDraft] = useState('');
   const [interestDraft, setInterestDraft] = useState('');
+  const [openToHire, setOpenToHire] = useState(false);
 
   // ── LocalStorage persistence ──────────────────────────────────────
   useEffect(() => {
@@ -121,6 +123,7 @@ export default function JoinForm() {
       if (d.socialValues) setSocialValues(d.socialValues);
       if (d.roles) setRoles(d.roles);
       if (d.interests) setInterests(d.interests);
+      if (typeof d.openToHire === 'boolean') setOpenToHire(d.openToHire);
     } catch { /* ignore corrupt storage */ }
   }, []);
 
@@ -131,13 +134,13 @@ export default function JoinForm() {
         name, website, selectedDepartment, memberType, studentId, batch,
         residentialSemester, currentSemester, expectedGrad,
         alumniWorkSector, alumniFieldAlignment,
-        bracuEmail, email, socialValues, roles, interests,
+        bracuEmail, email, socialValues, roles, interests, openToHire,
       }));
     } catch { /* ignore storage errors */ }
   }, [name, website, selectedDepartment, memberType, studentId, batch,
     residentialSemester, currentSemester, expectedGrad,
     alumniWorkSector, alumniFieldAlignment,
-    bracuEmail, email, socialValues, roles, interests, success]);
+    bracuEmail, email, socialValues, roles, interests, openToHire, success]);
 
   // ── Rate limit countdown ──────────────────────────────────────────
   useEffect(() => {
@@ -147,10 +150,15 @@ export default function JoinForm() {
   }, [rateLimitCountdown]);
 
   // ── Suggestions ──────────────────────────────────────────────────
-  const roleSuggestions = useMemo(
-    () => (selectedDepartment ? DEPARTMENT_ROLE_SUGGESTIONS[selectedDepartment] : []),
-    [selectedDepartment],
-  );
+  const roleSuggestions = useMemo(() => {
+    const deptSuggestions = selectedDepartment ? DEPARTMENT_ROLE_SUGGESTIONS[selectedDepartment] : [];
+    // Merge department-specific first, then universal options not already listed
+    const merged = [...deptSuggestions];
+    for (const r of ROLE_OPTIONS) {
+      if (!merged.includes(r)) merged.push(r);
+    }
+    return merged;
+  }, [selectedDepartment]);
   const interestSuggestions = useMemo(
     () => (selectedDepartment ? DEPARTMENT_INTEREST_SUGGESTIONS[selectedDepartment] : []),
     [selectedDepartment],
@@ -192,7 +200,7 @@ export default function JoinForm() {
     setExpectedGrad(''); setAlumniWorkSector(''); setAlumniFieldAlignment('');
     setBracuEmail(''); setEmail('');
     setSocialValues({ github: '', linkedin: '', twitter: '', instagram: '' });
-    setRoles([]); setInterests([]); setRoleDraft(''); setInterestDraft('');
+    setRoles([]); setInterests([]); setRoleDraft(''); setInterestDraft(''); setOpenToHire(false);
     setPhotoName(null); setPhotoPreview(null); setPhotoSize(null);
     if (fileRef.current) fileRef.current.value = '';
     setErrors({}); setGlobalError(null);
@@ -677,7 +685,8 @@ export default function JoinForm() {
 
         <div className="form-group">
           <label htmlFor="join-role-input" className="form-label">
-            Roles <span className="form-hint">(choose a suggestion or write your own)</span>
+            Target Roles / What You Do
+            <span className="form-hint"> — helps hiring managers find you</span>
           </label>
           <div className="tag-input-row">
             <div style={{ flex: 1, position: 'relative' }}>
@@ -685,7 +694,7 @@ export default function JoinForm() {
                 id="join-role-input"
                 list="role-suggestions"
                 className="form-input"
-                placeholder={selectedDepartment ? 'Type a role and press Add' : 'Select department first (step 1)'}
+                placeholder="e.g. software engineer, product manager, ai/ml engineer…"
                 value={roleDraft}
                 maxLength={MAX_TAG_LEN}
                 onChange={(e) => setRoleDraft(e.target.value)}
@@ -712,6 +721,22 @@ export default function JoinForm() {
             ))}
           </div>
           {roles.map((role) => <input key={role} type="hidden" name="roles" value={role} />)}
+        </div>
+
+        <div className="form-group" style={{ marginTop: -4 }}>
+          <label className="checkbox-item">
+            <input
+              type="checkbox"
+              name="open_to_hire"
+              value="true"
+              checked={openToHire}
+              onChange={(e) => setOpenToHire(e.target.checked)}
+            />
+            I&apos;m open to job opportunities, internships, or collaborations
+          </label>
+          <span className="form-hint" style={{ display: 'block', marginTop: 4, marginLeft: 22 }}>
+            Shows a visible badge on your profile so hiring managers can find you.
+          </span>
         </div>
 
         <div className="form-group">
