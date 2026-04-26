@@ -7,7 +7,7 @@ interface Node {
   id: number;
   slug: string;
   name: string;
-  website: string;
+  website?: string | null;
   x: number;
   y: number;
   vx: number;
