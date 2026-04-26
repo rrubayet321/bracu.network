@@ -14,8 +14,7 @@ A webring connecting designers, engineers, researchers, and founders — all fro
 
 </div>
 
-**[▶ Watch the launch video](video/bracu-network.mp4)**  
-<sub>Dark · 14 s · 1920 × 1080 — disciplines form a ring, the orbiting pulse traces the webring, then `bracu.network` lands.</sub>
+https://github.com/user-attachments/assets/071cdd6c-2d34-4341-8f03-1e84c429d855
 
 ---
 
