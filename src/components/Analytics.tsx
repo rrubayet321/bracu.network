@@ -1,5 +1,6 @@
 import { GoogleAnalytics } from '@next/third-parties/google';
 import Script from 'next/script';
+import { Analytics as VercelAnalytics } from '@vercel/analytics/next';
 
 const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 const clarityId = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
@@ -22,6 +23,9 @@ export default function Analytics() {
           `}
         </Script>
       )}
+
+      {/* Vercel Web Analytics */}
+      <VercelAnalytics />
     </>
   );
 }
