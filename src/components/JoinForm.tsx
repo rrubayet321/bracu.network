@@ -268,7 +268,7 @@ export default function JoinForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} ref={formRef} id="join-form" noValidate>
+    <form onSubmit={handleSubmit} id="join-form" noValidate>
 
       {/* ── Progress steps ───────────────────────────── */}
       <div className="form-progress">
