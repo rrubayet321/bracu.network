@@ -47,6 +47,15 @@ const SOCIAL_FIELDS = [
 
 const STEPS = ['Required', 'About You', 'Roles & Interests', 'Social Links'];
 
+// Maps each server-validated field name to the step index it lives on
+const FIELD_STEP: Record<string, number> = {
+  name: 0, website: 0, department: 0, member_type: 0, student_id: 0,
+  batch: 1, residential_semester: 1, current_semester: 1,
+  expected_graduation_semester: 1, alumni_work_sector: 1,
+  alumni_field_alignment: 1, bracu_email: 1, email: 1,
+  github: 3, linkedin: 3, twitter: 3, instagram: 3,
+};
+
 function isValidUrl(value: string) {
   try { return Boolean(new URL(value)); } catch { return false; }
 }
@@ -69,6 +78,8 @@ export default function JoinForm() {
   const [residentialSemester, setResidentialSemester] = useState('');
   const [currentSemester, setCurrentSemester] = useState('');
   const [expectedGrad, setExpectedGrad] = useState('');
+  const [alumniWorkSector, setAlumniWorkSector] = useState('');
+  const [alumniFieldAlignment, setAlumniFieldAlignment] = useState('');
   const [bracuEmail, setBracuEmail] = useState('');
   const [email, setEmail] = useState('');
   const [socialValues, setSocialValues] = useState<Record<string, string>>({
@@ -103,6 +114,8 @@ export default function JoinForm() {
       if (d.residentialSemester) setResidentialSemester(d.residentialSemester);
       if (d.currentSemester) setCurrentSemester(d.currentSemester);
       if (d.expectedGrad) setExpectedGrad(d.expectedGrad);
+      if (d.alumniWorkSector) setAlumniWorkSector(d.alumniWorkSector);
+      if (d.alumniFieldAlignment) setAlumniFieldAlignment(d.alumniFieldAlignment);
       if (d.bracuEmail) setBracuEmail(d.bracuEmail);
       if (d.email) setEmail(d.email);
       if (d.socialValues) setSocialValues(d.socialValues);
@@ -116,13 +129,15 @@ export default function JoinForm() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         name, website, selectedDepartment, memberType, studentId, batch,
-        residentialSemester, currentSemester, expectedGrad, bracuEmail,
-        email, socialValues, roles, interests,
+        residentialSemester, currentSemester, expectedGrad,
+        alumniWorkSector, alumniFieldAlignment,
+        bracuEmail, email, socialValues, roles, interests,
       }));
     } catch { /* ignore storage errors */ }
   }, [name, website, selectedDepartment, memberType, studentId, batch,
-    residentialSemester, currentSemester, expectedGrad, bracuEmail,
-    email, socialValues, roles, interests, success]);
+    residentialSemester, currentSemester, expectedGrad,
+    alumniWorkSector, alumniFieldAlignment,
+    bracuEmail, email, socialValues, roles, interests, success]);
 
   // ── Rate limit countdown ──────────────────────────────────────────
   useEffect(() => {
@@ -174,7 +189,8 @@ export default function JoinForm() {
   function clearForm() {
     setName(''); setWebsite(''); setSelectedDepartment(''); setMemberType('');
     setStudentId(''); setBatch(''); setResidentialSemester(''); setCurrentSemester('');
-    setExpectedGrad(''); setBracuEmail(''); setEmail('');
+    setExpectedGrad(''); setAlumniWorkSector(''); setAlumniFieldAlignment('');
+    setBracuEmail(''); setEmail('');
     setSocialValues({ github: '', linkedin: '', twitter: '', instagram: '' });
     setRoles([]); setInterests([]); setRoleDraft(''); setInterestDraft('');
     setPhotoName(null); setPhotoPreview(null); setPhotoSize(null);
@@ -194,26 +210,33 @@ export default function JoinForm() {
     setGlobalError(null);
 
     startTransition(async () => {
-      const result = await submitJoinRequest(formData);
-      if ('success' in result) {
-        setSuccess(true);
-      } else if (typeof result.error === 'string') {
-        if (result.error.toLowerCase().includes('too many')) {
-          setRateLimitCountdown(RATE_LIMIT_SECONDS);
-        }
-        setGlobalError(result.error);
-      } else {
-        const fieldErrors = result.error as Record<string, string[]>;
-        setErrors(fieldErrors);
-        // Scroll to first error
-        setTimeout(() => {
+      try {
+        const result = await submitJoinRequest(formData);
+        if ('success' in result) {
+          setSuccess(true);
+        } else if (typeof result.error === 'string') {
+          if (result.error.toLowerCase().includes('too many')) {
+            setRateLimitCountdown(RATE_LIMIT_SECONDS);
+          }
+          setGlobalError(result.error);
+        } else {
+          const fieldErrors = result.error as Record<string, string[]>;
+          setErrors(fieldErrors);
+          // Navigate to the step containing the first error, then scroll to it
           const firstKey = Object.keys(fieldErrors)[0];
-          if (!firstKey) return;
-          const el =
-            document.querySelector(`[name="${firstKey}"]`) ??
-            document.querySelector(`#join-${firstKey.replace(/_/g, '-')}`);
-          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 50);
+          if (firstKey) {
+            const targetStep = FIELD_STEP[firstKey] ?? 0;
+            setCurrentStep(targetStep);
+            setTimeout(() => {
+              const el =
+                document.querySelector(`[name="${firstKey}"]`) ??
+                document.querySelector(`#join-${firstKey.replace(/_/g, '-')}`);
+              el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 50);
+          }
+        }
+      } catch {
+        setGlobalError('Something went wrong. Please check your connection and try again.');
       }
     });
   }
@@ -504,7 +527,13 @@ export default function JoinForm() {
               <label htmlFor="join-alumni-work-sector" className="form-label">
                 Do you work in academia or industry? <span className="required">*</span>
               </label>
-              <select id="join-alumni-work-sector" name="alumni_work_sector" className="form-select" defaultValue="">
+              <select
+                id="join-alumni-work-sector"
+                name="alumni_work_sector"
+                className="form-select"
+                value={alumniWorkSector}
+                onChange={(e) => setAlumniWorkSector(e.target.value)}
+              >
                 <option value="" disabled>Select one</option>
                 <option value="academia">Academia</option>
                 <option value="industry">Industry</option>
@@ -516,7 +545,13 @@ export default function JoinForm() {
               <label htmlFor="join-alumni-field-alignment" className="form-label">
                 Are you working in your own field? <span className="required">*</span>
               </label>
-              <select id="join-alumni-field-alignment" name="alumni_field_alignment" className="form-select" defaultValue="">
+              <select
+                id="join-alumni-field-alignment"
+                name="alumni_field_alignment"
+                className="form-select"
+                value={alumniFieldAlignment}
+                onChange={(e) => setAlumniFieldAlignment(e.target.value)}
+              >
                 <option value="" disabled>Select one</option>
                 <option value="own_field">Own field</option>
                 <option value="other_field">Other field</option>

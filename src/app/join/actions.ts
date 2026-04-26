@@ -28,7 +28,7 @@ const memberSchema = z.object({
     .or(z.literal('')),
   residential_semester: z
     .string()
-    .regex(/^RS-\d{2}$/i, 'Format: RS-XX (example: RS-60)')
+    .regex(/^RS-\d{2,3}$/i, 'Format: RS-XX (example: RS-60)')
     .optional()
     .or(z.literal('')),
   residential_semester_public: z.enum(['true']).optional(),
@@ -82,6 +82,7 @@ export type JoinActionResult =
   | { error: string | Record<string, string[]> };
 
 export async function submitJoinRequest(formData: FormData): Promise<JoinActionResult> {
+  try {
   // ── Rate limiting (defence-in-depth — also enforced in middleware) ────
   const headersList = await headers();
   const ip =
@@ -210,6 +211,8 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
     residential_semester_public: data.residential_semester_public === 'true',
     current_semester: data.current_semester || null,
     expected_graduation_semester: data.expected_graduation_semester || null,
+    alumni_work_sector: data.alumni_work_sector || null,
+    alumni_field_alignment: data.alumni_field_alignment || null,
     email: data.email || null,
     bracu_email: data.bracu_email || null,
     instagram: data.instagram || null,
@@ -236,4 +239,8 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
   }
 
   return { success: true };
+  } catch (err) {
+    console.error('Unexpected error in submitJoinRequest:', err);
+    return { error: 'An unexpected error occurred. Please try again.' };
+  }
 }
