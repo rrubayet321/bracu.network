@@ -6,7 +6,7 @@ import { withTimeout } from '@/lib/with-timeout';
 import type { Member } from '@/types/member';
 
 const SELECT =
-  'id, slug, name, member_type, website, department, batch, roles, interests, profile_pic, instagram, twitter, linkedin, github, connections, created_at, updated_at, is_approved' as const;
+  'id, slug, name, member_type, website, department, batch, roles, interests, open_to_hire, profile_pic, instagram, twitter, linkedin, github, connections, created_at, updated_at, is_approved' as const;
 
 /** Avoid hanging SSR when Supabase is misconfigured, blocked, or very slow. */
 const QUERY_TIMEOUT_MS = 12_000;

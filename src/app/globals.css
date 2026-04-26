@@ -342,19 +342,41 @@ a:hover { color: var(--text-primary); }
 
 .filter-dropdown-panel {
   position: absolute;
-  top: 0;
+  top: calc(100% + 6px);
   right: 0;
   z-index: 50;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 20px;
-  min-width: 320px;
+  padding: 16px;
+  width: 320px;
+  max-height: 480px;
+  overflow-y: auto;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
+
+.filter-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-clear-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 0;
+  transition: color 0.15s;
+}
+.filter-clear-btn:hover { color: var(--text-secondary); }
 
 .filter-group-title {
   font-size: 11px;
@@ -363,7 +385,51 @@ a:hover { color: var(--text-primary); }
   letter-spacing: 0.08em;
   color: var(--text-muted);
   margin-bottom: 10px;
-  grid-column: 1 / -1;
+}
+
+.filter-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-block-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.filter-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter-chip {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.filter-chip:hover {
+  background: rgba(94,106,210,0.1);
+  border-color: rgba(94,106,210,0.4);
+  color: var(--text-primary);
+}
+
+.filter-chip.active {
+  background: rgba(94,106,210,0.18);
+  border-color: rgba(94,106,210,0.6);
+  color: #a5b0ff;
+  font-weight: 500;
 }
 
 .filter-section { display: flex; flex-direction: column; gap: 6px; }
@@ -1625,12 +1691,11 @@ a:hover { color: var(--text-primary); }
 
   /* ── Filter dropdown ────────────────────────────── */
   .filter-dropdown-panel {
-    min-width: 0;
     width: calc(100vw - 32px);
     left: 50%;
     right: auto;
     transform: translateX(-50%);
-    grid-template-columns: 1fr;
+    max-height: 60vh;
   }
 
   /* ── Search bar ─────────────────────────────────── */

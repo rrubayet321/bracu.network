@@ -59,73 +59,63 @@ export default function FilterDropdown({ filters, onChange }: FilterDropdownProp
 
       {open && (
         <div className="filter-dropdown-panel" id="filter-dropdown-panel">
-          <div className="flex-between" style={{ gridColumn: '1 / -1' }}>
-            <span className="filter-group-title" style={{ margin: 0 }}>
-              Filter members
-            </span>
+
+          {/* Header */}
+          <div className="filter-panel-header">
+            <span className="filter-group-title" style={{ margin: 0 }}>Filters</span>
             {activeCount > 0 && (
-              <button
-                onClick={clearAll}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontSize: 12,
-                }}
-              >
-                <X size={12} /> clear all
+              <button className="filter-clear-btn" onClick={clearAll}>
+                <X size={11} /> clear all
               </button>
             )}
           </div>
 
+          {/* Availability toggle */}
+          <div className="filter-block">
+            <div className="filter-block-title">Availability</div>
+            <button
+              type="button"
+              className={`filter-chip${filters.openToHire ? ' active' : ''}`}
+              onClick={() => onChange({ ...filters, openToHire: !filters.openToHire })}
+            >
+              Open to hire
+            </button>
+          </div>
+
           {/* Departments */}
-          <div className="filter-section">
-            <div className="filter-section-title">Department</div>
-            {DEPARTMENT_OPTIONS.map((dept) => (
-              <label key={dept} className="filter-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={filters.departments.includes(dept)}
-                  onChange={() => toggleDept(dept)}
-                />
-                {dept}
-              </label>
-            ))}
-          </div>
-
-          {/* Open to hire */}
-          <div className="filter-section" style={{ gridColumn: '1 / -1' }}>
-            <div className="filter-section-title">Availability</div>
-            <label className="filter-checkbox-label">
-              <input
-                type="checkbox"
-                checked={filters.openToHire}
-                onChange={() => onChange({ ...filters, openToHire: !filters.openToHire })}
-              />
-              Open to hire / opportunities
-            </label>
-          </div>
-
-          {/* Roles */}
-          <div className="filter-section" style={{ gridColumn: '1 / -1' }}>
-            <div className="filter-section-title">Role</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 16px' }}>
-              {ROLE_OPTIONS.map((role) => (
-                <label key={role} className="filter-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={filters.roles.includes(role)}
-                    onChange={() => toggleRole(role)}
-                  />
-                  {role}
-                </label>
+          <div className="filter-block">
+            <div className="filter-block-title">Department</div>
+            <div className="filter-chip-group">
+              {DEPARTMENT_OPTIONS.map((dept) => (
+                <button
+                  key={dept}
+                  type="button"
+                  className={`filter-chip${filters.departments.includes(dept) ? ' active' : ''}`}
+                  onClick={() => toggleDept(dept)}
+                >
+                  {dept}
+                </button>
               ))}
             </div>
           </div>
+
+          {/* Roles */}
+          <div className="filter-block">
+            <div className="filter-block-title">Role</div>
+            <div className="filter-chip-group">
+              {ROLE_OPTIONS.map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  className={`filter-chip${filters.roles.includes(role) ? ' active' : ''}`}
+                  onClick={() => toggleRole(role)}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+          </div>
+
         </div>
       )}
     </div>
