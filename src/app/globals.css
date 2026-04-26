@@ -118,15 +118,16 @@ a:hover { color: var(--text-primary); }
 
 
 
-/* ─── Animated Hero (Tree Structure) ─────────────────────────────────── */
-@keyframes beamTravel {
-  0% { stroke-dashoffset: 10; }
-  50% { stroke-dashoffset: -100; }
-  100% { stroke-dashoffset: -100; }
-}
+/* ─── Animated Hero (Webring Ring) ───────────────────────────────────── */
 
-.energy-beam {
-  animation: beamTravel 6s infinite linear;
+/* Chord lines start invisible; SVG <animate> controls their opacity */
+.chord { opacity: 0; }
+
+/* Accessibility: hide animated chords entirely when motion is reduced.
+   The JS component also omits <animate> elements in reduced-motion mode,
+   so this is a belt-and-suspenders CSS safety net. */
+@media (prefers-reduced-motion: reduce) {
+  .chord { display: none; }
 }
 
 .animated-hero-wrapper {
@@ -139,7 +140,7 @@ a:hover { color: var(--text-primary); }
 
 .animated-hero-svg-container {
   width: 100%;
-  max-width: 720px;
+  max-width: 520px;
   overflow: visible;
   margin-bottom: 0;
 }
@@ -591,6 +592,25 @@ a:hover { color: var(--text-primary); }
 .btn-primary:active {
   transform: translateY(0);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Next / forward step button — minimal ghost style */
+.btn-next {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.12);
+  letter-spacing: 0.01em;
+}
+
+.btn-next:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.btn-next:active {
+  transform: translateX(0);
 }
 
 .btn-secondary {
@@ -1514,6 +1534,9 @@ a:hover { color: var(--text-primary); }
     overflow: visible;
   }
 
+  /* Hide chord lines on small screens — reduce visual noise */
+  .chord { display: none; }
+
   .hero-title {
     font-size: clamp(2.4rem, 11vw, 3rem);
     margin-bottom: 10px;
@@ -1671,6 +1694,9 @@ a:hover { color: var(--text-primary); }
 
 /* Slightly wider phones / small tablets */
 @media (max-width: 480px) {
+  /* Hide SVG role labels inside the ring on very small screens */
+  .ring-label { display: none; }
+
   /* Role boxes in hero — shrink font */
   .role-box {
     font-size: 10px;

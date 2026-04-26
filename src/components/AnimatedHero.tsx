@@ -1,46 +1,227 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
+
+// ─── Ring geometry ────────────────────────────────────────────────────────────
+const CX  = 250;   // SVG centre-x (viewBox 0 0 500 290)
+const CY  = 143;   // SVG centre-y
+const R   = 108;   // ring radius
+const DUR = '8s';  // one full orbit
+
+function nodePos(deg: number): [number, number] {
+  // 0° = top, clockwise
+  const rad = ((deg - 90) * Math.PI) / 180;
+  return [
+    parseFloat((CX + R * Math.cos(rad)).toFixed(2)),
+    parseFloat((CY + R * Math.sin(rad)).toFixed(2)),
+  ];
+}
+
+// Motion path: full clockwise circle starting from the top node
+const [sx, sy] = nodePos(0);
+const RING_PATH = `M ${sx},${sy} a ${R},${R} 0 1,1 0.001,0`;
+
+// [angle°, label | null, pulse-arrival delay (s)]
+const RING_NODES: Array<[number, string | null, number]> = [
+  [0,   'DESIGNERS',   0],
+  [45,  null,          1],
+  [90,  'ENGINEERS',   2],
+  [135, null,          3],
+  [180, 'RESEARCHERS', 4],
+  [225, null,          5],
+  [270, 'FOUNDERS',    6],
+  [315, null,          7],
+];
+
+function labelAnchor(deg: number): { dx: number; dy: number; textAnchor: 'start' | 'middle' | 'end' } {
+  if (deg === 0)   return { dx: 0,   dy: -14, textAnchor: 'middle' };
+  if (deg === 90)  return { dx: 14,  dy:   4, textAnchor: 'start'  };
+  if (deg === 180) return { dx: 0,   dy:  18, textAnchor: 'middle' };
+  if (deg === 270) return { dx: -14, dy:   4, textAnchor: 'end'    };
+  return { dx: 0, dy: 0, textAnchor: 'middle' };
+}
+
+// ─── Chord definitions ────────────────────────────────────────────────────────
+// Each chord fires once per 8-second cycle at a different phase.
+// keyTimes format: [invisible, fade-in-start, fade-in-end, fade-out-start, fade-out-end, invisible]
+const CHORDS = [
+  // DESIGNERS (top) ↔ RESEARCHERS (bottom) — fires early in the cycle (~0.3–1.8s)
+  {
+    from: 0,
+    to:   4,
+    values:   '0;0;0.4;0.4;0;0',
+    keyTimes: '0;0.03;0.07;0.22;0.26;1',
+  },
+  // ENGINEERS (right) ↔ FOUNDERS (left) — fires mid-cycle (~4.3–5.8s)
+  {
+    from: 2,
+    to:   6,
+    values:   '0;0;0.4;0.4;0;0',
+    keyTimes: '0;0.53;0.57;0.72;0.76;1',
+  },
+];
+
+// ─── Reduced-motion subscription ─────────────────────────────────────────────
+// useSyncExternalStore is the correct way to subscribe to external state
+// (matchMedia) without triggering the react-hooks/set-state-in-effect lint rule.
+function subscribePrefersReducedMotion(callback: () => void) {
+  const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  mq.addEventListener('change', callback);
+  return () => mq.removeEventListener('change', callback);
+}
+const getPrefersReducedMotion  = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const getPrefersReducedMotionServer = () => false; // server has no preference
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function AnimatedHero() {
+  const reduced = useSyncExternalStore(
+    subscribePrefersReducedMotion,
+    getPrefersReducedMotion,
+    getPrefersReducedMotionServer,
+  );
+
   return (
     <div className="animated-hero-wrapper">
       <div className="animated-hero-svg-container">
         <svg
-          viewBox="0 0 800 220"
+          viewBox="0 0 500 290"
           preserveAspectRatio="xMidYMid meet"
           className="animated-hero-svg"
           aria-hidden="true"
         >
-          {/* Base lines */}
-          <path d="M 100 52 C 100 150, 400 120, 400 200" fill="none" stroke="#2a2c30" strokeWidth="2" />
-          <path d="M 300 52 C 300 150, 400 120, 400 200" fill="none" stroke="#2a2c30" strokeWidth="2" />
-          <path d="M 500 52 C 500 150, 400 120, 400 200" fill="none" stroke="#2a2c30" strokeWidth="2" />
-          <path d="M 700 52 C 700 150, 400 120, 400 200" fill="none" stroke="#2a2c30" strokeWidth="2" />
+          <defs>
+            {/* Motion path for the orbiting pulse */}
+            <path id="ringMotionPath" d={RING_PATH} />
 
-          {/* Energy Beams */}
-          <path className="energy-beam" d="M 100 52 C 100 150, 400 120, 400 200" fill="none" stroke="#5e6ad2" strokeWidth="2" pathLength="100" strokeDasharray="8 150" strokeLinecap="round" filter="drop-shadow(0 0 4px #5e6ad2)" />
-          <path className="energy-beam" d="M 300 52 C 300 150, 400 120, 400 200" fill="none" stroke="#5e6ad2" strokeWidth="2" pathLength="100" strokeDasharray="8 150" strokeLinecap="round" filter="drop-shadow(0 0 4px #5e6ad2)" />
-          <path className="energy-beam" d="M 500 52 C 500 150, 400 120, 400 200" fill="none" stroke="#5e6ad2" strokeWidth="2" pathLength="100" strokeDasharray="8 150" strokeLinecap="round" filter="drop-shadow(0 0 4px #5e6ad2)" />
-          <path className="energy-beam" d="M 700 52 C 700 150, 400 120, 400 200" fill="none" stroke="#5e6ad2" strokeWidth="2" pathLength="100" strokeDasharray="8 150" strokeLinecap="round" filter="drop-shadow(0 0 4px #5e6ad2)" />
+            {/* Glow for the orbiting pulse dot */}
+            <filter id="pulseGlow" x="-100%" y="-100%" width="300%" height="300%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
 
-          {/* Role boxes — pure SVG (no foreignObject, works on all browsers/mobile) */}
-          <rect x="22"  y="10" width="156" height="36" rx="18" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.10)" strokeWidth="1" />
-          <text x="100" y="33" textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize="11" fontFamily="-apple-system,BlinkMacSystemFont,'Inter',sans-serif" fontWeight="500" letterSpacing="0.07em">DESIGNERS</text>
+            {/* Subtle glow for labeled nodes */}
+            <filter id="nodeGlow" x="-150%" y="-150%" width="400%" height="400%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="1.8" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
 
-          <rect x="222" y="10" width="156" height="36" rx="18" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.10)" strokeWidth="1" />
-          <text x="300" y="33" textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize="11" fontFamily="-apple-system,BlinkMacSystemFont,'Inter',sans-serif" fontWeight="500" letterSpacing="0.07em">ENGINEERS</text>
+          {/* ── Base ring circle ───────────────────────────────────────────── */}
+          <circle
+            cx={CX} cy={CY} r={R}
+            fill="none"
+            stroke="rgba(255,255,255,0.09)"
+            strokeWidth="1"
+          />
 
-          <rect x="422" y="10" width="156" height="36" rx="18" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.10)" strokeWidth="1" />
-          <text x="500" y="33" textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize="11" fontFamily="-apple-system,BlinkMacSystemFont,'Inter',sans-serif" fontWeight="500" letterSpacing="0.07em">RESEARCHERS</text>
+          {/* ── Chord lines (cross-discipline connections) ─────────────────── */}
+          {CHORDS.map(({ from, to, values, keyTimes }, ci) => {
+            const [x1, y1] = nodePos(RING_NODES[from][0]);
+            const [x2, y2] = nodePos(RING_NODES[to][0]);
+            return (
+              <line
+                key={ci}
+                className={`chord chord-${ci + 1}`}
+                x1={x1} y1={y1}
+                x2={x2} y2={y2}
+                stroke="rgba(255,255,255,0.22)"
+                strokeWidth="0.6"
+              >
+                {!reduced && (
+                  <animate
+                    attributeName="opacity"
+                    values={values}
+                    keyTimes={keyTimes}
+                    dur={DUR}
+                    repeatCount="indefinite"
+                  />
+                )}
+              </line>
+            );
+          })}
 
-          <rect x="622" y="10" width="156" height="36" rx="18" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.10)" strokeWidth="1" />
-          <text x="700" y="33" textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize="11" fontFamily="-apple-system,BlinkMacSystemFont,'Inter',sans-serif" fontWeight="500" letterSpacing="0.07em">FOUNDERS</text>
+          {/* ── Ring nodes ─────────────────────────────────────────────────── */}
+          {RING_NODES.map(([deg, label, delay], i) => {
+            const [x, y] = nodePos(deg);
+            const isLabeled = label !== null;
+            const baseR = isLabeled ? 4.5 : 3;
+            return (
+              <circle
+                key={i}
+                cx={x} cy={y}
+                r={baseR}
+                fill={isLabeled ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.2)'}
+                filter={isLabeled ? 'url(#nodeGlow)' : undefined}
+              >
+                {/* Flash when the orbiting pulse passes */}
+                {!reduced && isLabeled && (
+                  <animate
+                    attributeName="r"
+                    values={`${baseR};${baseR + 2.5};${baseR};${baseR}`}
+                    keyTimes="0;0.03;0.07;1"
+                    dur={DUR}
+                    begin={`${delay}s`}
+                    repeatCount="indefinite"
+                  />
+                )}
+                {!reduced && !isLabeled && (
+                  <animate
+                    attributeName="r"
+                    values={`${baseR};${baseR + 1.5};${baseR};${baseR}`}
+                    keyTimes="0;0.03;0.07;1"
+                    dur={DUR}
+                    begin={`${delay}s`}
+                    repeatCount="indefinite"
+                  />
+                )}
+              </circle>
+            );
+          })}
 
-          {/* Focal glow dot where beams converge */}
-          <circle cx="400" cy="200" r="3.5" fill="#5e6ad2" filter="drop-shadow(0 0 6px #5e6ad2)" opacity="0.85" />
+          {/* ── Role labels ────────────────────────────────────────────────── */}
+          {RING_NODES.map(([deg, label], i) => {
+            if (!label) return null;
+            const [nx, ny] = nodePos(deg);
+            const { dx, dy, textAnchor } = labelAnchor(deg);
+            return (
+              <text
+                key={`lbl-${i}`}
+                className="ring-label"
+                x={nx + dx}
+                y={ny + dy}
+                textAnchor={textAnchor}
+                fill="rgba(255,255,255,0.38)"
+                fontSize="9"
+                fontFamily="-apple-system,BlinkMacSystemFont,'Inter',sans-serif"
+                fontWeight="500"
+                letterSpacing="0.09em"
+              >
+                {label}
+              </text>
+            );
+          })}
+
+          {/* ── Orbiting pulse dot ─────────────────────────────────────────── */}
+          {!reduced ? (
+            <circle r="3.5" fill="rgba(255,255,255,0.88)" opacity="1" filter="url(#pulseGlow)">
+              <animateMotion dur={DUR} repeatCount="indefinite">
+                <mpath href="#ringMotionPath" />
+              </animateMotion>
+            </circle>
+          ) : (
+            // Static dot at the top (DESIGNERS) when reduced-motion is on
+            <circle cx={sx} cy={sy} r="3.5" fill="rgba(255,255,255,0.88)" opacity="1" filter="url(#pulseGlow)" />
+          )}
         </svg>
       </div>
 
-      {/* Title + text sit OUTSIDE the SVG — scales with CSS, not SVG transforms */}
+      {/* Title + copy below the ring */}
       <div className="hero-text-content">
         <h1 className="hero-title">bracu.network</h1>
         <p className="hero-description">

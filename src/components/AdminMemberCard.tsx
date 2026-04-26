@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import Image from 'next/image';
 import { approveMember, rejectMember, removeMember, setMemberType } from '@/app/admin/actions';
 import type { Member } from '@/types/member';
@@ -27,6 +27,7 @@ export default function AdminMemberCard({ member, isApproved = false }: AdminMem
   const [rejectPending, startReject] = useTransition();
   const [removePending, startRemove] = useTransition();
   const [typePending, startTypeChange] = useTransition();
+  const [actionError, setActionError] = useState<string | null>(null);
 
   return (
     <div className="admin-card" id={`admin-card-${member.slug}`}>
@@ -102,8 +103,10 @@ export default function AdminMemberCard({ member, isApproved = false }: AdminMem
             disabled={typePending}
             onChange={(e) => {
               const val = e.target.value as 'student' | 'alumni';
+              setActionError(null);
               startTypeChange(async () => {
-                await setMemberType(member.id, val);
+                const res = await setMemberType(member.id, val);
+                if (res && 'error' in res) setActionError(res.error);
               });
             }}
           >
@@ -113,6 +116,21 @@ export default function AdminMemberCard({ member, isApproved = false }: AdminMem
           </select>
           {typePending && <Loader2 size={12} style={{ color: 'var(--text-muted)', animation: 'spin 0.8s linear infinite' }} />}
         </div>
+
+        {/* Inline error banner */}
+        {actionError && (
+          <div style={{
+            marginTop: 8,
+            padding: '6px 10px',
+            fontSize: 12,
+            color: '#f87171',
+            background: 'rgba(239,68,68,0.06)',
+            border: '1px solid rgba(239,68,68,0.2)',
+            borderRadius: 6,
+          }}>
+            {actionError}
+          </div>
+        )}
       </div>
 
       {/* Actions */}
@@ -122,11 +140,13 @@ export default function AdminMemberCard({ member, isApproved = false }: AdminMem
             className="btn btn-danger"
             disabled={removePending}
             id={`remove-btn-${member.slug}`}
-            onClick={() =>
+            onClick={() => {
+              setActionError(null);
               startRemove(async () => {
-                await removeMember(member.id);
-              })
-            }
+                const res = await removeMember(member.id);
+                if (res && 'error' in res) setActionError(res.error);
+              });
+            }}
           >
             {removePending ? <Loader2 size={14} /> : <Trash2 size={14} />}
             Remove
@@ -137,11 +157,13 @@ export default function AdminMemberCard({ member, isApproved = false }: AdminMem
               className="btn btn-success"
               disabled={approvePending || rejectPending}
               id={`approve-btn-${member.slug}`}
-              onClick={() =>
+              onClick={() => {
+                setActionError(null);
                 startApprove(async () => {
-                  await approveMember(member.id);
-                })
-              }
+                  const res = await approveMember(member.id);
+                  if (res && 'error' in res) setActionError(res.error);
+                });
+              }}
             >
               {approvePending ? <Loader2 size={14} /> : <Check size={14} />}
               Approve
@@ -151,11 +173,13 @@ export default function AdminMemberCard({ member, isApproved = false }: AdminMem
               className="btn btn-danger"
               disabled={approvePending || rejectPending}
               id={`reject-btn-${member.slug}`}
-              onClick={() =>
+              onClick={() => {
+                setActionError(null);
                 startReject(async () => {
-                  await rejectMember(member.id);
-                })
-              }
+                  const res = await rejectMember(member.id);
+                  if (res && 'error' in res) setActionError(res.error);
+                });
+              }}
             >
               {rejectPending ? <Loader2 size={14} /> : <X size={14} />}
               Reject

@@ -334,13 +334,17 @@ export default function NetworkGraph({ members, highlightSlug, onHoverSlug }: Ne
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Background pill
+        // Background pill (roundRect not available on older browsers)
         const tw = ctx.measureText(label).width;
         const px = 8;
         const ph = 16;
         ctx.fillStyle = 'rgba(15,16,17,0.85)';
         ctx.beginPath();
-        ctx.roundRect(node.x - tw / 2 - px, labelY - ph / 2, tw + px * 2, ph, 6);
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(node.x - tw / 2 - px, labelY - ph / 2, tw + px * 2, ph, 6);
+        } else {
+          ctx.rect(node.x - tw / 2 - px, labelY - ph / 2, tw + px * 2, ph);
+        }
         ctx.fill();
 
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -433,6 +437,7 @@ export default function NetworkGraph({ members, highlightSlug, onHoverSlug }: Ne
 
     const onPointerUp = (e: PointerEvent) => {
       if (dragRef.current.active) {
+        canvas.releasePointerCapture(e.pointerId);
         const { x, y } = getCanvasPos(e.clientX, e.clientY);
         const hit = hitTest(x, y);
         // Short-drag = click → open website

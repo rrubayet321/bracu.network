@@ -1,14 +1,25 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { getAdminClient } from '@/lib/supabase/admin-server';
 import { createClient } from '@/lib/supabase/server';
 
-/** Shared auth guard — returns user or throws a safe error string. */
+/** Shared auth guard — returns user or throws if not authenticated / not an allowed admin. */
 async function requireAdmin(): Promise<{ id: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
+
+  const allowed = (process.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (!allowed.includes((user.email ?? '').toLowerCase())) {
+    throw new Error('Not authorized');
+  }
+
   return user;
 }
 
@@ -90,4 +101,5 @@ export async function setMemberType(id: string, type: 'student' | 'alumni') {
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  redirect('/admin/login');
 }

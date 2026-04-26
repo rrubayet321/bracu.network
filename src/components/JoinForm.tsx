@@ -88,8 +88,6 @@ export default function JoinForm() {
   const [roleDraft, setRoleDraft] = useState('');
   const [interestDraft, setInterestDraft] = useState('');
 
-  const formRef = useRef<HTMLFormElement>(null);
-
   // ── LocalStorage persistence ──────────────────────────────────────
   useEffect(() => {
     try {
@@ -414,7 +412,7 @@ export default function JoinForm() {
         </div>
 
         <div className="form-step-nav">
-          <button type="button" className="btn btn-primary" onClick={() => setCurrentStep(1)}>
+          <button type="button" className="btn btn-next" onClick={() => setCurrentStep(1)}>
             Next →
           </button>
         </div>
@@ -631,7 +629,7 @@ export default function JoinForm() {
 
         <div className="form-step-nav">
           <button type="button" className="btn btn-secondary" onClick={() => setCurrentStep(0)}>← Back</button>
-          <button type="button" className="btn btn-primary" onClick={() => setCurrentStep(2)}>Next →</button>
+          <button type="button" className="btn btn-next" onClick={() => setCurrentStep(2)}>Next →</button>
         </div>
       </div>
 
@@ -674,7 +672,7 @@ export default function JoinForm() {
           <div className="tag-chip-list">
             {roles.map((role) => (
               <button key={role} type="button" className="tag-chip" onClick={() => removeTag(role, roles, setRoles)} title="Remove">
-                {role} ×
+                {role}
               </button>
             ))}
           </div>
@@ -713,7 +711,7 @@ export default function JoinForm() {
           <div className="tag-chip-list">
             {interests.map((interest) => (
               <button key={interest} type="button" className="tag-chip" onClick={() => removeTag(interest, interests, setInterests)} title="Remove">
-                {interest} ×
+                {interest}
               </button>
             ))}
           </div>
@@ -722,7 +720,7 @@ export default function JoinForm() {
 
         <div className="form-step-nav">
           <button type="button" className="btn btn-secondary" onClick={() => setCurrentStep(1)}>← Back</button>
-          <button type="button" className="btn btn-primary" onClick={() => setCurrentStep(3)}>Next →</button>
+          <button type="button" className="btn btn-next" onClick={() => setCurrentStep(3)}>Next →</button>
         </div>
       </div>
 
