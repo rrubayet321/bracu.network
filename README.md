@@ -27,12 +27,13 @@ It is **not a social network**. It is a curated, low-noise directory of real bui
 ## Features
 
 - **Animated hero** — SVG energy beams visualise every discipline converging into one network
-- **Live member directory** — searchable, filterable table with avatars, department, website, and social links
-- **Interactive network graph** — real-time force-directed graph of all members (hover-linked to the table)
+- **Live member directory** — searchable, filterable table with avatars, department, website, and social links; filter by student or alumni
+- **2D force-directed network graph** — physics-based canvas graph (custom Verlet engine, no library); hover-synced bidirectionally with the member table; draggable nodes; click to open member site
+- **Student / alumni differentiation** — members are tagged as current student or alumni; separate filter tabs + coloured badges in the directory
+- **Multi-step join form** — 4-step application with progress bar, localStorage draft persistence, drag-and-drop photo upload, real-time social URL validation, rate-limit countdown, and auto-scroll to first error
 - **Webring embed widget** — drop a `<script>` tag on your personal site to join the ring
-- **Join form** — multi-section application form with profile photo upload and strict BRACU email/ID validation
-- **Admin dashboard** — approve or reject pending applications, protected by Supabase Auth
-- **Production-hardened** — rate limiting, CSP headers, Row-Level Security, EXIF stripping, Zod validation
+- **Admin dashboard** — full-card view of pending and approved members; approve, reject, remove, and change member type (student/alumni) — all with instant ISR cache revalidation
+- **Production-hardened** — rate limiting, CSP headers, Row-Level Security, EXIF stripping, Zod validation, auth guard on all mutations
 
 ---
 
@@ -72,11 +73,13 @@ It is **not a social network**. It is a curated, low-noise directory of real bui
 | Decision | Rationale |
 |---|---|
 | **Next.js App Router + Server Actions** | Form submission happens server-side — no client-side API keys exposed |
-| **ISR (60s revalidation)** | Home page is statically cached — DB is queried once per minute, not per visitor |
-| **Supabase RLS** | Public reads only see `is_approved = true` rows; anon inserts are capped to `is_approved = false` |
-| **`sharp` for image processing** | Profile photos are resized to 400×400 and EXIF metadata is stripped before upload |
-| **In-memory sliding-window rate limiter** | No external service required; Edge-runtime compatible |
+| **ISR (60s revalidation) + on-demand revalidation** | Home page is statically cached; admin approvals and type changes bust the cache immediately via `revalidatePath` |
+| **Supabase RLS** | Public reads only see `is_approved = true` rows; service-role client used for all mutations via server actions |
+| **Custom 2D physics engine** | Force-directed graph built without a third-party library — keeps the bundle lean and gives full control over rendering |
+| **`sharp` for image processing** | Profile photos are resized to 400×400 and EXIF metadata (including GPS) is stripped before upload |
+| **In-memory sliding-window rate limiter** | No external service required; dual enforcement at middleware and server action level |
 | **`zod` for validation** | Strict schema including BRACU-specific student ID regex and `@bracu.ac.bd` email enforcement |
+| **localStorage form persistence** | Join form draft is saved to localStorage on every keystroke and restored on revisit |
 
 ---
 
@@ -86,11 +89,12 @@ It is **not a social network**. It is a curated, low-noise directory of real bui
 |---|---|
 | **HTTP headers** | CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options`, `Referrer-Policy` via `next.config.ts` |
 | **Rate limiting** | 5 join submissions/min · 10 admin login attempts/5min (middleware + server action double enforcement) |
+| **Auth guard** | `requireAdmin()` called on every admin mutation (approve, reject, remove, setMemberType) — validates session server-side via `getUser()`, not just cookie |
 | **Input sanitization** | All fields trimmed; `roles` and `interests` arrays capped at 10 items × 60 chars |
-| **Image validation** | Magic-byte MIME check, 5 MB cap, EXIF strip, sharp resize |
-| **Database** | Row-Level Security enabled; public INSERT only allows `is_approved = false` |
-| **Auth** | `getUser()` server-validated on every admin request — not just session cookie checks |
-| **Secrets** | `SUPABASE_SERVICE_ROLE_KEY` is server-only; never bundled to the browser |
+| **Image validation** | Magic-byte MIME check (not just extension), 5 MB cap, EXIF strip, sharp resize to 400×400 |
+| **Embed XSS protection** | `embed.js` builds DOM nodes via `createElement` / `textContent`; no `innerHTML` interpolation; URLs validated as `https://` only |
+| **Database** | Row-Level Security enabled; public reads limited to approved members; all writes go through service-role server actions |
+| **Secrets** | `SUPABASE_SERVICE_ROLE_KEY` is server-only (`server-only` import); never bundled to the browser |
 
 ---
 
@@ -122,48 +126,73 @@ cp .env.example .env.local
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key   # server-only, never public
+
+# Optional analytics
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_CLARITY_PROJECT_ID=xxxxxxxxxx
 ```
 
 ### Database
 
-Run this in the Supabase SQL editor to create the members table:
+Run this in the Supabase SQL editor to set up the full schema:
 
 ```sql
-create table public.members (
-  id          uuid primary key default gen_random_uuid(),
-  name        text not null,
-  slug        text unique not null,
-  website     text not null,
-  email       text,
-  department  text,
-  student_id  text,
-  bio         text,
-  roles       text[],
-  interests   text[],
-  github      text,
-  linkedin    text,
-  twitter     text,
-  instagram   text,
-  profile_pic text,
-  is_approved boolean default false,
-  created_at  timestamptz default now()
+-- 1. Members table
+CREATE TABLE public.members (
+  id                              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug                            TEXT UNIQUE NOT NULL,
+  name                            TEXT NOT NULL,
+  website                         TEXT NOT NULL,
+  department                      TEXT NOT NULL,
+  member_type                     TEXT CHECK (member_type IN ('student', 'alumni')),
+  student_id                      TEXT,
+  batch                           TEXT,
+  current_semester                TEXT,
+  expected_graduation_semester    TEXT,
+  residential_semester            TEXT,
+  residential_semester_public     BOOLEAN DEFAULT false,
+  bracu_email                     TEXT,
+  email                           TEXT,
+  roles                           TEXT[] DEFAULT '{}',
+  interests                       TEXT[] DEFAULT '{}',
+  connections                     TEXT[] DEFAULT '{}',
+  github                          TEXT,
+  linkedin                        TEXT,
+  twitter                         TEXT,
+  instagram                       TEXT,
+  profile_pic                     TEXT,
+  is_approved                     BOOLEAN DEFAULT false,
+  created_at                      TIMESTAMPTZ DEFAULT now(),
+  updated_at                      TIMESTAMPTZ DEFAULT now()
 );
 
--- Performance index
-create index idx_members_approved on members (is_approved, created_at desc);
+-- 2. Enable RLS
+ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
+
+-- 3. RLS policies
+CREATE POLICY "Public can read approved members"
+  ON public.members FOR SELECT USING (is_approved = true);
+
+CREATE POLICY "Admins can read all members"
+  ON public.members FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Admins can update members"
+  ON public.members FOR UPDATE
+  USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Admins can delete members"
+  ON public.members FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- 4. Storage bucket for profile photos
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('profile-photos', 'profile-photos', true);
+
+CREATE POLICY "Public profile photos are viewable by everyone"
+  ON storage.objects FOR SELECT USING (bucket_id = 'profile-photos');
 ```
 
-Then enable **Row-Level Security** in the Supabase Dashboard and add these policies:
-
-```sql
--- Public: read only approved members
-create policy "Public can read approved members"
-  on members for select using (is_approved = true);
-
--- Public: apply to join (cannot self-approve)
-create policy "Anyone can apply to join"
-  on members for insert with check (is_approved = false);
-```
+> **Note:** The `INSERT` policy is intentionally omitted. All inserts go through `getAdminClient()` in server actions to prevent unauthenticated abuse.
 
 ### Run
 
@@ -172,13 +201,28 @@ npm run dev
 # → http://localhost:3000
 ```
 
-> **Note:** The dev server uses Turbopack and may occasionally crash with a memory error after many rapid file changes. Just re-run `npm run dev` — this is a known Next.js 16 dev mode issue and does not affect production.
+> The dev script sets `NODE_OPTIONS='--max-old-space-size=4096'` to prevent the occasional heap crash from Turbopack's memory usage in dev mode. Production builds are unaffected.
+
+---
+
+## Admin dashboard
+
+| Path | Description |
+|---|---|
+| `/admin/login` | Sign in with your Supabase admin email |
+| `/admin` | Full dashboard — pending applications + approved members |
+
+From the dashboard you can:
+- **Approve** a pending application (instantly revalidates the home page cache)
+- **Reject** a pending application (deletes the row)
+- **Remove** an approved member
+- **Set member type** (student / alumni) via a dropdown on each card — this controls how members are filtered on the home page
 
 ---
 
 ## Joining the network
 
-No technical knowledge required. Go to [bracu.network/join](https://bracu.network/join), fill out the form, and wait for approval. You'll receive no spam — just an entry in the directory.
+No technical knowledge required. Go to [bracu.network/join](https://bracu.network/join), fill out the 4-step form, and wait for approval. The form saves your progress automatically — you can close the tab and come back.
 
 ## Embedding the webring widget
 
@@ -192,7 +236,7 @@ Once approved, add this to your personal website to join the webring navigation:
 </script>
 ```
 
-This renders a small navigation bar linking to the previous and next member in the ring.
+This renders a small navigation bar linking to the previous and next member in the ring. The widget uses DOM APIs only — no `innerHTML` interpolation.
 
 ---
 
@@ -201,25 +245,26 @@ This renders a small navigation bar linking to the previous and next member in t
 ```
 src/
 ├── app/
-│   ├── admin/          # Protected admin dashboard (approve/reject)
-│   ├── api/members/    # Public REST endpoint (embed widget)
-│   ├── join/           # Application form + server actions
-│   ├── icon.tsx        # Dynamic favicon (BN brand mark)
-│   ├── layout.tsx      # Root layout + global footer
-│   └── page.tsx        # Home page (ISR, 60s)
+│   ├── admin/          # Protected admin dashboard (approve/reject/remove/setType)
+│   ├── api/members/    # Public REST endpoint (embed widget + CORS)
+│   ├── join/           # 4-step application form + server actions
+│   ├── icon.tsx        # Dynamic favicon
+│   ├── layout.tsx      # Root layout + analytics + global footer
+│   └── page.tsx        # Home page (ISR 60s + on-demand revalidation)
 ├── components/
 │   ├── AnimatedHero    # SVG energy beam animation
-│   ├── MemberTable     # Searchable/filterable directory table
-│   ├── NetworkGraph    # Force-directed member graph
-│   ├── JoinForm        # Multi-section application form
-│   ├── AdminMemberCard # Approve/reject card
+│   ├── HomeClient      # Client shell — wires table ↔ graph hover sync
+│   ├── MemberTable     # Searchable/filterable directory table with type badges
+│   ├── NetworkGraph    # 2D force-directed canvas graph (custom physics)
+│   ├── JoinForm        # 4-step form with localStorage, drag-drop, validation
+│   ├── AdminMemberCard # Full member card with approve/reject/remove/type toggle
 │   ├── FilterDropdown  # Department + role filters
 │   └── SocialIcons     # Uniform social link icons
 ├── lib/
 │   ├── rate-limit.ts   # Sliding-window in-memory rate limiter
 │   ├── with-timeout.ts # DB query timeout wrapper
-│   ├── supabase/       # Client + server Supabase instances
-│   └── data/           # Server-only data fetchers
+│   ├── supabase/       # Client / server / admin Supabase instances
+│   └── data/           # Server-only data fetchers (server-only import guard)
 └── middleware.ts        # Auth guard + rate limiting (Edge)
 ```
 
@@ -229,8 +274,8 @@ src/
 
 - [ ] Email notification on application approval
 - [ ] Member profile pages (`/members/[slug]`)
-- [ ] Semester/batch filtering
 - [ ] Upstash Redis rate limiter (for multi-region deployments)
+- [ ] Alumni work sector / field alignment display in directory
 
 ---
 

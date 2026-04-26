@@ -13,6 +13,27 @@
   const API_URL = 'https://bracu.network/api/members';
   const SITE_URL = 'https://bracu.network';
 
+  /** Escape HTML special chars to prevent XSS when injecting into attributes or text. */
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;');
+  }
+
+  /** Only allow http/https URLs to prevent javascript: injection. */
+  function safeUrl(url) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+      return parsed.href;
+    } catch {
+      return null;
+    }
+  }
+
   const container = document.createElement('div');
   container.style.cssText = `
     display: inline-flex;
@@ -27,18 +48,17 @@
     color: #A0A0A0;
   `;
 
-  // Placeholder while loading
-  container.innerHTML = `<span style="color: #555;">Loading webring...</span>`;
+  container.innerHTML = '<span style="color: #555;">Loading webring...</span>';
   currentScript.parentNode.insertBefore(container, currentScript.nextSibling);
 
   fetch(API_URL)
-    .then(res => res.json())
-    .then(members => {
+    .then(function(res) { return res.json(); })
+    .then(function(members) {
       if (!Array.isArray(members) || members.length === 0) throw new Error('No members found');
       
-      const idx = members.findIndex(m => m.slug === user);
+      const idx = members.findIndex(function(m) { return m.slug === user; });
       if (idx === -1) {
-        container.innerHTML = `<span>User not found in webring</span>`;
+        container.textContent = 'User not found in webring';
         return;
       }
 
@@ -48,19 +68,46 @@
       const prev = members[prevIdx];
       const next = members[nextIdx];
 
-      container.innerHTML = `
-        <a href="${prev.website}" title="${prev.name}" style="color: #A0A0A0; text-decoration: none; display: flex; align-items: center; gap: 4px; transition: color 0.15s;" onmouseover="this.style.color='#f5f5f5'" onmouseout="this.style.color='#A0A0A0'">
-          ◀ prev
-        </a>
-        <a href="${SITE_URL}" style="color: #4A6CF7; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;" title="bracu.network">
-          [B] bracu.network
-        </a>
-        <a href="${next.website}" title="${next.name}" style="color: #A0A0A0; text-decoration: none; display: flex; align-items: center; gap: 4px; transition: color 0.15s;" onmouseover="this.style.color='#f5f5f5'" onmouseout="this.style.color='#A0A0A0'">
-          next ▶
-        </a>
-      `;
+      const prevUrl = safeUrl(prev.website);
+      const nextUrl = safeUrl(next.website);
+
+      if (!prevUrl || !nextUrl) {
+        console.error('bracu.network webring: Invalid member URL');
+        container.style.display = 'none';
+        return;
+      }
+
+      // Build DOM nodes instead of innerHTML to avoid XSS
+      const linkStyle = 'color: #A0A0A0; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;';
+
+      const prevLink = document.createElement('a');
+      prevLink.href = prevUrl;
+      prevLink.title = escapeHtml(prev.name);
+      prevLink.setAttribute('style', linkStyle);
+      prevLink.textContent = '\u25C4 prev';
+      prevLink.addEventListener('mouseover', function() { this.style.color = '#f5f5f5'; });
+      prevLink.addEventListener('mouseout', function() { this.style.color = '#A0A0A0'; });
+
+      const hubLink = document.createElement('a');
+      hubLink.href = SITE_URL;
+      hubLink.title = 'bracu.network';
+      hubLink.setAttribute('style', 'color: #5e6ad2; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;');
+      hubLink.textContent = '[B] bracu.network';
+
+      const nextLink = document.createElement('a');
+      nextLink.href = nextUrl;
+      nextLink.title = escapeHtml(next.name);
+      nextLink.setAttribute('style', linkStyle);
+      nextLink.textContent = 'next \u25BA';
+      nextLink.addEventListener('mouseover', function() { this.style.color = '#f5f5f5'; });
+      nextLink.addEventListener('mouseout', function() { this.style.color = '#A0A0A0'; });
+
+      container.innerHTML = '';
+      container.appendChild(prevLink);
+      container.appendChild(hubLink);
+      container.appendChild(nextLink);
     })
-    .catch(err => {
+    .catch(function(err) {
       console.error('bracu.network webring error:', err);
       container.style.display = 'none';
     });

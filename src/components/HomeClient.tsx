@@ -29,11 +29,7 @@ export default function HomeClient({ members, showConfigHint, showTimeoutHint }:
         </div>
       )}
       {showConfigHint && (
-        <div
-          className="login-error"
-          style={{ marginBottom: 24, maxWidth: 640 }}
-          role="status"
-        >
+        <div className="login-error" style={{ marginBottom: 24, maxWidth: 640 }} role="status">
           <strong>Local setup:</strong> copy <code style={{ fontSize: 12 }}>.env.example</code> to{' '}
           <code style={{ fontSize: 12 }}>.env.local</code> and set your real Supabase URL and anon key
           so the directory can load. The UI works with an empty list until then.
@@ -45,22 +41,23 @@ export default function HomeClient({ members, showConfigHint, showTimeoutHint }:
       </header>
 
       <div className="main-grid">
-        {/* Left column */}
+        {/* Left column — member table */}
         <div className="left-col panel-card">
-          <MemberTable members={members} onHover={setHoveredSlug} />
+          <MemberTable members={members} onHover={setHoveredSlug} highlightSlug={hoveredSlug} />
         </div>
 
-        {/* Right column */}
+        {/* Right column — graph (no extra panel-card padding; graph has its own border) */}
         <aside className="right-col">
-          <div className="panel-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <NetworkGraph members={members} highlightSlug={hoveredSlug} />
-          </div>
+          <NetworkGraph
+            members={members}
+            highlightSlug={hoveredSlug}
+            onHoverSlug={setHoveredSlug}
+          />
           <p
             className="text-muted"
             style={{ fontSize: 11, marginTop: 10, textAlign: 'center' }}
           >
-            {members.length} member{members.length !== 1 ? 's' : ''} in the
-            network
+            {members.length} member{members.length !== 1 ? 's' : ''} in the network
           </p>
         </aside>
       </div>

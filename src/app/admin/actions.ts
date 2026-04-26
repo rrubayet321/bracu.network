@@ -4,9 +4,18 @@ import { revalidatePath } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin-server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function approveMember(id: string) {
-  const admin = getAdminClient();
+/** Shared auth guard — returns user or throws a safe error string. */
+async function requireAdmin(): Promise<{ id: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  return user;
+}
 
+export async function approveMember(id: string) {
+  try { await requireAdmin(); } catch { return { error: 'Not authenticated' }; }
+
+  const admin = getAdminClient();
   const { error } = await admin
     .from('members')
     .update({ is_approved: true })
@@ -17,16 +26,15 @@ export async function approveMember(id: string) {
     return { error: 'Failed to approve member' };
   }
 
-  // Immediately bust ISR cache — member appears on homepage without waiting 60s
   revalidatePath('/');
   revalidatePath('/admin');
-
   return { success: true };
 }
 
 export async function rejectMember(id: string) {
-  const admin = getAdminClient();
+  try { await requireAdmin(); } catch { return { error: 'Not authenticated' }; }
 
+  const admin = getAdminClient();
   const { error } = await admin
     .from('members')
     .delete()
@@ -42,8 +50,9 @@ export async function rejectMember(id: string) {
 }
 
 export async function removeMember(id: string) {
-  const admin = getAdminClient();
+  try { await requireAdmin(); } catch { return { error: 'Not authenticated' }; }
 
+  const admin = getAdminClient();
   const { error } = await admin
     .from('members')
     .delete()
@@ -59,11 +68,23 @@ export async function removeMember(id: string) {
   return { success: true };
 }
 
-/** For `<form action={...}>` — Next.js requires `void` return, not an object. */
-export async function removeMemberFormAction(formData: FormData) {
-  const id = formData.get('id');
-  if (typeof id !== 'string' || !id) return;
-  await removeMember(id);
+export async function setMemberType(id: string, type: 'student' | 'alumni') {
+  try { await requireAdmin(); } catch { return { error: 'Not authenticated' }; }
+
+  const admin = getAdminClient();
+  const { error } = await admin
+    .from('members')
+    .update({ member_type: type })
+    .eq('id', id);
+
+  if (error) {
+    console.error('setMemberType error:', error);
+    return { error: 'Failed to update member type' };
+  }
+
+  revalidatePath('/');
+  revalidatePath('/admin');
+  return { success: true };
 }
 
 export async function signOut() {

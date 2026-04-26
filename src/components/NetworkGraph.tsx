@@ -2,101 +2,128 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Member } from '@/types/member';
-import { GlowCard } from '@/components/ui/spotlight-card';
 
 interface Node {
   id: number;
   slug: string;
   name: string;
+  website: string;
   x: number;
   y: number;
-  z: number;
+  vx: number;
+  vy: number;
   connections: number[];
-  color: string;
-  profilePic?: string;
   img?: HTMLImageElement;
+  imgLoaded: boolean;
 }
 
 interface NetworkGraphProps {
   members: Member[];
   highlightSlug?: string | null;
+  onHoverSlug?: (slug: string | null) => void;
 }
 
-const DOT_COLOR = 'rgba(255, 255, 255, 0.92)';
-const HOVER_COLOR = 'rgba(255, 255, 255, 1)';
-const CONNECTION_COLOR = 'rgba(255, 255, 255, 0.13)';
-const AUTO_ROTATE_SPEED = 0.0022;
-const FOV = 600;
-const BASE_RADIUS = 10;
+const NODE_RADIUS = 18;
+const NODE_RADIUS_HOVER = 22;
+const REPULSION = 3200;
+const SPRING_LENGTH = 120;
+const SPRING_K = 0.04;
+const DAMPING = 0.82;
+const CENTER_GRAVITY = 0.018;
+const ACCENT = '#5e6ad2';
+const EDGE_COLOR = 'rgba(255,255,255,0.07)';
+const EDGE_HOVER = 'rgba(94,106,210,0.45)';
+const RING_COLOR = 'rgba(255,255,255,0.10)';
+const RING_HOVER = ACCENT;
+const ENERGY_THRESHOLD = 0.12;
+const MAX_SETTLE_FRAMES = 400;
 
-function rotateY(x: number, y: number, z: number, angle: number): [number, number, number] {
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  return [x * cos + z * sin, y, -x * sin + z * cos];
+function seedRand(seed: number): number {
+  const x = Math.sin(seed + 1) * 43758.5453123;
+  return x - Math.floor(x);
 }
 
-function rotateX(x: number, y: number, z: number, angle: number): [number, number, number] {
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  return [x, y * cos - z * sin, y * sin + z * cos];
+function getInitials(name: string): string {
+  return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 }
 
-function project(x: number, y: number, z: number, cx: number, cy: number, fov: number): [number, number] {
-  const scale = fov / (fov + z);
-  return [x * scale + cx, y * scale + cy];
+function drawInitialsFallback(
+  ctx: CanvasRenderingContext2D,
+  node: Node,
+  x: number,
+  y: number,
+  r: number,
+) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a1d2e';
+  ctx.fill();
+  ctx.font = `600 ${Math.round(r * 0.55)}px -apple-system, BlinkMacSystemFont, "Inter", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText(getInitials(node.name), x, y);
+  ctx.restore();
 }
 
-function makeSeedRand(seed: number) {
-  const s = Math.sin(seed * 999.123) * 10000;
-  return s - Math.floor(s);
-}
-
-export default function NetworkGraph({ members, highlightSlug }: NetworkGraphProps) {
+export default function NetworkGraph({ members, highlightSlug, onHoverSlug }: NetworkGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const parentRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const nodesRef = useRef<Node[]>([]);
-  const transformedRef = useRef<Array<{ node: Node; sx: number; sy: number; z: number; visible: boolean }>>([]);
-  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const rafRef = useRef<number>(0);
-  const rotRef = useRef({ y: 0.4, x: 0.3 });
-  const dragRef = useRef({ active: false, x: 0, y: 0, rotY: 0, rotX: 0 });
-  const sizeRef = useRef({ w: 0, h: 0, dpr: 1 });
+  const sizeRef = useRef({ w: 0, h: 0 });
+  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const hoveredIdRef = useRef<number | null>(null);
   const highlightIdRef = useRef<number | null>(null);
+  const settleFrameRef = useRef(0);
+  const isSettledRef = useRef(false);
+  const dragRef = useRef<{ active: boolean; id: number | null; ox: number; oy: number }>({
+    active: false, id: null, ox: 0, oy: 0,
+  });
+
   const memberIndexBySlug = useMemo(
     () => new Map(members.map((m, i) => [m.slug, i])),
-    [members]
+    [members],
   );
 
+  // Sync highlighted node from external prop
   useEffect(() => {
+    const prev = highlightIdRef.current;
     highlightIdRef.current =
       highlightSlug && memberIndexBySlug.has(highlightSlug)
-        ? memberIndexBySlug.get(highlightSlug) ?? null
+        ? (memberIndexBySlug.get(highlightSlug) ?? null)
         : null;
+    if (prev !== highlightIdRef.current) {
+      isSettledRef.current = false;
+      settleFrameRef.current = 0;
+    }
   }, [highlightSlug, memberIndexBySlug]);
 
+  // Build nodes when members change
   useEffect(() => {
-    const goldenRatio = (1 + Math.sqrt(5)) / 2;
-    nodesRef.current = members.map((m, i) => {
-      const theta = (2 * Math.PI * i) / goldenRatio;
-      const phi = Math.acos(1 - (2 * (i + 0.5)) / Math.max(members.length, 1));
-      const x = Math.cos(theta) * Math.sin(phi);
-      const y = Math.cos(phi);
-      const z = Math.sin(theta) * Math.sin(phi);
+    const { w, h } = sizeRef.current;
+    const cx = w / 2 || 300;
+    const cy = h / 2 || 250;
+    const spread = Math.min(cx, cy) * 0.55;
+    const n = members.length;
 
-      const deterministicConnections = new Set<number>();
+    nodesRef.current = members.map((m, i) => {
+      // Place nodes in a loose circle to start physics
+      const angle = (2 * Math.PI * i) / Math.max(n, 1);
+      const r = spread * (0.5 + 0.5 * seedRand(i * 7));
+
       const fromData = (m.connections ?? [])
         .map((slug) => memberIndexBySlug.get(slug))
-        .filter((idx): idx is number => typeof idx === 'number');
-      for (const idx of fromData.slice(0, 4)) {
-        if (idx !== i) deterministicConnections.add(idx);
-      }
-      if (deterministicConnections.size === 0) {
-        const n = members.length;
-        const numConnections = 1 + Math.floor(makeSeedRand(i) * 2);
-        for (let j = 0; j < numConnections; j++) {
-          const connId = Math.floor(makeSeedRand(i * 31 + j * 17) * Math.max(n, 1));
-          if (connId !== i) deterministicConnections.add(connId);
+        .filter((idx): idx is number => idx !== undefined && idx !== i);
+
+      // Fallback: sparse deterministic graph if no real connections
+      const connSet = new Set(fromData.slice(0, 4));
+      if (connSet.size === 0 && n > 1) {
+        const numConn = 1 + Math.floor(seedRand(i * 3) * 2);
+        for (let j = 0; j < numConn; j++) {
+          const target = Math.floor(seedRand(i * 31 + j * 17) * n);
+          if (target !== i) connSet.add(target);
         }
       }
 
@@ -106,6 +133,10 @@ export default function NetworkGraph({ members, highlightSlug }: NetworkGraphPro
         if (!img) {
           img = new Image();
           img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            isSettledRef.current = false;
+            settleFrameRef.current = 0;
+          };
           img.src = m.profile_pic;
           imageCacheRef.current.set(m.profile_pic, img);
         }
@@ -115,35 +146,86 @@ export default function NetworkGraph({ members, highlightSlug }: NetworkGraphPro
         id: i,
         slug: m.slug,
         name: m.name,
-        x,
-        y,
-        z,
-        connections: [...deterministicConnections],
-        color: `hsl(${(i * 137.508) % 360} 80% 70%)`,
-        profilePic: m.profile_pic,
+        website: m.website,
+        x: cx + Math.cos(angle) * r,
+        y: cy + Math.sin(angle) * r,
+        vx: 0,
+        vy: 0,
+        connections: [...connSet],
         img,
+        imgLoaded: img ? img.complete && img.naturalWidth > 0 : false,
       };
     });
+
     hoveredIdRef.current = null;
+    isSettledRef.current = false;
+    settleFrameRef.current = 0;
   }, [members, memberIndexBySlug]);
 
-  const hitTest = useCallback((clientX: number, clientY: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    let closestId: number | null = null;
-    let closestDist = Infinity;
-    for (const item of transformedRef.current) {
-      if (!item.visible) continue;
-      const dist = Math.hypot(x - item.sx, y - item.sy);
-      if (dist < 30 && dist < closestDist) {
-        closestDist = dist;
-        closestId = item.node.id;
+  const stepPhysics = useCallback(() => {
+    const nodes = nodesRef.current;
+    const { w, h } = sizeRef.current;
+    if (!nodes.length || !w || !h) return 0;
+    const cx = w / 2;
+    const cy = h / 2;
+    let totalEnergy = 0;
+
+    // Repulsion between all pairs
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i];
+        const b = nodes[j];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const force = REPULSION / (dist * dist);
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        a.vx -= fx;
+        a.vy -= fy;
+        b.vx += fx;
+        b.vy += fy;
       }
     }
-    hoveredIdRef.current = closestId;
+
+    // Spring attraction along edges
+    for (const node of nodes) {
+      for (const connId of node.connections) {
+        if (connId >= nodes.length) continue;
+        const other = nodes[connId];
+        const dx = other.x - node.x;
+        const dy = other.y - node.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const displacement = dist - SPRING_LENGTH;
+        const fx = (dx / dist) * displacement * SPRING_K;
+        const fy = (dy / dist) * displacement * SPRING_K;
+        node.vx += fx;
+        node.vy += fy;
+        other.vx -= fx;
+        other.vy -= fy;
+      }
+    }
+
+    // Center gravity + integrate
+    for (const node of nodes) {
+      if (dragRef.current.active && dragRef.current.id === node.id) continue;
+
+      node.vx += (cx - node.x) * CENTER_GRAVITY;
+      node.vy += (cy - node.y) * CENTER_GRAVITY;
+      node.vx *= DAMPING;
+      node.vy *= DAMPING;
+      node.x += node.vx;
+      node.y += node.vy;
+
+      // Keep within bounds with padding
+      const pad = NODE_RADIUS_HOVER + 4;
+      node.x = Math.max(pad, Math.min(w - pad, node.x));
+      node.y = Math.max(pad, Math.min(h - pad, node.y));
+
+      totalEnergy += node.vx * node.vx + node.vy * node.vy;
+    }
+
+    return totalEnergy;
   }, []);
 
   const draw = useCallback(() => {
@@ -158,186 +240,245 @@ export default function NetworkGraph({ members, highlightSlug }: NetworkGraphPro
       return;
     }
 
-    const cx = w / 2;
-    const cy = h / 2;
-    const radius = Math.min(w, h) * 0.38;
+    // Run physics unless settled
+    let energy = 0;
+    if (!isSettledRef.current) {
+      energy = stepPhysics();
+      settleFrameRef.current++;
+      if (energy < ENERGY_THRESHOLD || settleFrameRef.current > MAX_SETTLE_FRAMES) {
+        isSettledRef.current = true;
+      }
+    }
 
-    if (!dragRef.current.active) rotRef.current.y += AUTO_ROTATE_SPEED;
+    // Update imgLoaded flags
+    for (const node of nodesRef.current) {
+      if (node.img && !node.imgLoaded) {
+        node.imgLoaded = node.img.complete && node.img.naturalWidth > 0;
+        if (node.imgLoaded) isSettledRef.current = false; // repaint once
+      }
+    }
 
     ctx.clearRect(0, 0, w, h);
-    const g = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius * 1.2);
-    g.addColorStop(0, '#0a0a0a');
-    g.addColorStop(1, '#000000');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
 
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    const transformed = nodesRef.current.map((node) => {
-      let x = node.x * radius;
-      let y = node.y * radius;
-      let z = node.z * radius;
-      [x, y, z] = rotateX(x, y, z, rotRef.current.x);
-      [x, y, z] = rotateY(x, y, z, rotRef.current.y);
-      const visible = z <= 0;
-      const [sx, sy] = project(x, y, z, cx, cy, FOV);
-      return { node, sx, sy, z, visible };
-    });
-    transformedRef.current = transformed;
-    const byId = new Map(transformed.map((t) => [t.node.id, t] as const));
-
+    const nodes = nodesRef.current;
     const hoveredId = hoveredIdRef.current;
     const highlightedId = highlightIdRef.current;
-    const hoveredNode = hoveredId !== null ? nodesRef.current[hoveredId] : null;
-    const highlightedNode = highlightedId !== null ? nodesRef.current[highlightedId] : null;
+    const activeId = hoveredId ?? highlightedId;
+    const activeNode = activeId !== null ? nodes[activeId] : null;
 
-    for (const item of transformed) {
-      if (!item.visible) continue;
-      for (const connId of item.node.connections) {
-        if (connId <= item.node.id) continue;
-        const other = byId.get(connId);
-        if (!other || !other.visible) continue;
-        const isHoveredEdge = hoveredNode && (item.node.id === hoveredNode.id || other.node.id === hoveredNode.id);
-        const isHighlightedEdge = highlightedNode && (item.node.id === highlightedNode.id || other.node.id === highlightedNode.id);
+    // Draw edges
+    for (const node of nodes) {
+      for (const connId of node.connections) {
+        if (connId >= nodes.length || connId <= node.id) continue;
+        const other = nodes[connId];
+        const isActive =
+          activeNode &&
+          (node.id === activeNode.id || other.id === activeNode.id);
+
         ctx.beginPath();
-        ctx.moveTo(item.sx, item.sy);
-        ctx.lineTo(other.sx, other.sy);
-        ctx.strokeStyle = isHoveredEdge || isHighlightedEdge ? 'rgba(120,150,255,0.35)' : CONNECTION_COLOR;
-        ctx.globalAlpha = isHoveredEdge || isHighlightedEdge ? 0.85 : 0.6;
-        ctx.lineWidth = isHoveredEdge || isHighlightedEdge ? 1 : 0.6;
+        ctx.moveTo(node.x, node.y);
+        ctx.lineTo(other.x, other.y);
+        ctx.strokeStyle = isActive ? EDGE_HOVER : EDGE_COLOR;
+        ctx.lineWidth = isActive ? 1.2 : 0.8;
+        ctx.globalAlpha = isActive ? 0.9 : 0.6;
         ctx.stroke();
       }
     }
     ctx.globalAlpha = 1;
 
-    for (const item of transformed) {
-      if (!item.visible) continue;
-      const isHovered = item.node.id === hoveredId || item.node.id === highlightedId;
-      const isConnected = Boolean(
-        (hoveredNode && hoveredNode.connections.includes(item.node.id)) ||
-        (highlightedNode && highlightedNode.connections.includes(item.node.id))
-      );
-      const depthAlpha = Math.max(0.35, 1 - (item.z + radius) / (2 * radius));
-      const nodeRadius = isHovered ? 16 : isConnected ? 13 : BASE_RADIUS;
+    // Draw nodes (back to front: non-hovered first)
+    const sorted = [...nodes].sort((a, b) => {
+      const aActive = a.id === activeId;
+      const bActive = b.id === activeId;
+      return Number(aActive) - Number(bActive);
+    });
 
+    for (const node of sorted) {
+      const isHovered = node.id === hoveredId;
+      const isHighlighted = node.id === highlightedId;
+      const isActive = isHovered || isHighlighted;
+      const isConnected =
+        activeNode !== null && activeNode.connections.includes(node.id);
+      const r = isActive ? NODE_RADIUS_HOVER : NODE_RADIUS;
+
+      // Clip and draw photo or initials
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(item.sx, item.sy, nodeRadius + (isHovered ? 3 : 1), 0, Math.PI * 2);
-      ctx.fillStyle = isHovered ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.015)';
-      ctx.fill();
+      ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+      ctx.clip();
 
-      if (item.node.img && item.node.img.complete && item.node.img.naturalWidth > 0) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(item.sx, item.sy, nodeRadius, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(item.node.img, item.sx - nodeRadius, item.sy - nodeRadius, nodeRadius * 2, nodeRadius * 2);
-        ctx.restore();
+      if (node.imgLoaded && node.img) {
+        ctx.drawImage(node.img, node.x - r, node.y - r, r * 2, r * 2);
       } else {
-        ctx.beginPath();
-        ctx.arc(item.sx, item.sy, nodeRadius, 0, Math.PI * 2);
-        ctx.fillStyle = isHovered || isConnected ? HOVER_COLOR : DOT_COLOR;
-        ctx.globalAlpha = depthAlpha;
-        ctx.fill();
-        ctx.globalAlpha = 1;
+        drawInitialsFallback(ctx, node, node.x, node.y, r);
       }
+      ctx.restore();
 
+      // Ring
       ctx.beginPath();
-      ctx.arc(item.sx, item.sy, nodeRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = item.node.color;
-      ctx.shadowBlur = isHovered ? 14 : 6;
-      ctx.shadowColor = item.node.color;
-      ctx.globalAlpha = isHovered ? 0.95 : 0.42;
-      ctx.lineWidth = isHovered ? 1.8 : 1;
+      ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = isActive ? RING_HOVER : isConnected ? 'rgba(94,106,210,0.35)' : RING_COLOR;
+      ctx.lineWidth = isActive ? 2 : 1;
+      if (isActive) {
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = ACCENT;
+      }
       ctx.stroke();
-      ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
 
-      if (isHovered) {
-        ctx.font = '12px system-ui, -apple-system, Segoe UI, sans-serif';
+      // Name label on hover
+      if (isActive) {
+        const label = node.name;
+        const labelY = node.y + r + 14;
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, "Inter", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(255,255,255,0.95)';
-        ctx.fillText(item.node.name, item.sx, item.sy - 18);
-        ctx.font = '10px system-ui, -apple-system, Segoe UI, sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.68)';
-        ctx.fillText(`${item.node.connections.length} connections`, item.sx, item.sy - 6);
+        ctx.textBaseline = 'middle';
+
+        // Background pill
+        const tw = ctx.measureText(label).width;
+        const px = 8;
+        const ph = 16;
+        ctx.fillStyle = 'rgba(15,16,17,0.85)';
+        ctx.beginPath();
+        ctx.roundRect(node.x - tw / 2 - px, labelY - ph / 2, tw + px * 2, ph, 6);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillText(label, node.x, labelY);
       }
     }
 
     rafRef.current = requestAnimationFrame(draw);
-  }, []);
+  }, [stepPhysics]);
 
+  // Canvas setup, events, resize
   useEffect(() => {
     const canvas = canvasRef.current;
-    const parent = parentRef.current;
-    if (!canvas || !parent) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
 
-    const resizeCanvas = () => {
+    const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
-      sizeRef.current = { w, h, dpr };
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      sizeRef.current = { w, h };
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       const ctx = canvas.getContext('2d');
       if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      isSettledRef.current = false;
+      settleFrameRef.current = 0;
     };
-    resizeCanvas();
 
-    const ro = new ResizeObserver(resizeCanvas);
-    ro.observe(parent);
-    window.addEventListener('resize', resizeCanvas);
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(container);
 
-    canvas.style.cursor = 'grab';
-    const onPointerDown = (e: PointerEvent) => {
-      dragRef.current = { active: true, x: e.clientX, y: e.clientY, rotY: rotRef.current.y, rotX: rotRef.current.x };
-      canvas.setPointerCapture(e.pointerId);
-      canvas.style.cursor = 'grabbing';
+    const getCanvasPos = (clientX: number, clientY: number) => {
+      const rect = canvas.getBoundingClientRect();
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    };
+
+    const hitTest = (cx: number, cy: number): number | null => {
+      let best: number | null = null;
+      let bestDist = Infinity;
+      for (const node of nodesRef.current) {
+        const d = Math.hypot(cx - node.x, cy - node.y);
+        if (d < NODE_RADIUS_HOVER + 8 && d < bestDist) {
+          bestDist = d;
+          best = node.id;
+        }
+      }
+      return best;
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      if (dragRef.current.active) {
-        const dx = e.clientX - dragRef.current.x;
-        const dy = e.clientY - dragRef.current.y;
-        rotRef.current.y = dragRef.current.rotY + dx * 0.0065;
-        rotRef.current.x = Math.max(-1.05, Math.min(1.05, dragRef.current.rotX + dy * 0.0065));
-      } else {
-        hitTest(e.clientX, e.clientY);
+      const { x, y } = getCanvasPos(e.clientX, e.clientY);
+
+      if (dragRef.current.active && dragRef.current.id !== null) {
+        const node = nodesRef.current[dragRef.current.id];
+        if (node) {
+          node.x = x - dragRef.current.ox;
+          node.y = y - dragRef.current.oy;
+          node.vx = 0;
+          node.vy = 0;
+          isSettledRef.current = false;
+          settleFrameRef.current = 0;
+        }
+        return;
+      }
+
+      const hit = hitTest(x, y);
+      const prev = hoveredIdRef.current;
+      hoveredIdRef.current = hit;
+      canvas.style.cursor = hit !== null ? 'pointer' : 'default';
+
+      if (prev !== hit) {
+        isSettledRef.current = false;
+        settleFrameRef.current = 0;
+        onHoverSlug?.(hit !== null ? nodesRef.current[hit]?.slug ?? null : null);
       }
     };
 
-    const onPointerUp = () => {
-      dragRef.current.active = false;
-      canvas.style.cursor = 'grab';
+    const onPointerDown = (e: PointerEvent) => {
+      const { x, y } = getCanvasPos(e.clientX, e.clientY);
+      const hit = hitTest(x, y);
+      if (hit !== null) {
+        const node = nodesRef.current[hit];
+        dragRef.current = { active: true, id: hit, ox: x - node.x, oy: y - node.y };
+        canvas.setPointerCapture(e.pointerId);
+        canvas.style.cursor = 'grabbing';
+      }
     };
 
-    canvas.addEventListener('pointerdown', onPointerDown);
+    const onPointerUp = (e: PointerEvent) => {
+      if (dragRef.current.active) {
+        const { x, y } = getCanvasPos(e.clientX, e.clientY);
+        const hit = hitTest(x, y);
+        // Short-drag = click → open website
+        if (hit !== null && hit === dragRef.current.id) {
+          const node = nodesRef.current[hit];
+          if (node?.website) window.open(node.website, '_blank', 'noopener');
+        }
+      }
+      dragRef.current = { active: false, id: null, ox: 0, oy: 0 };
+      canvas.style.cursor = 'default';
+    };
+
+    const onPointerLeave = () => {
+      if (!dragRef.current.active) {
+        hoveredIdRef.current = null;
+        onHoverSlug?.(null);
+        canvas.style.cursor = 'default';
+        isSettledRef.current = false;
+        settleFrameRef.current = 0;
+      }
+    };
+
     canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('pointerleave', onPointerUp);
+    canvas.addEventListener('pointerleave', onPointerLeave);
 
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(draw);
+
     return () => {
       cancelAnimationFrame(rafRef.current);
-      canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointerup', onPointerUp);
-      canvas.removeEventListener('pointerleave', onPointerUp);
+      canvas.removeEventListener('pointerleave', onPointerLeave);
       ro.disconnect();
-      window.removeEventListener('resize', resizeCanvas);
     };
-  }, [draw, hitTest]);
+  }, [draw, onHoverSlug]);
 
   return (
-    <GlowCard customSize={true} className="graph-container" glowColor="red">
-      <div ref={parentRef} style={{ position: 'absolute', inset: 0 }}>
-        <canvas ref={canvasRef} className="graph-canvas" />
-      </div>
-    </GlowCard>
+    <div ref={containerRef} className="graph-container">
+      <canvas ref={canvasRef} className="graph-canvas" />
+      {members.length === 0 && (
+        <p className="graph-empty">no members yet</p>
+      )}
+    </div>
   );
 }

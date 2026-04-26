@@ -17,6 +17,7 @@ type MemberTypeFilter = 'all' | 'student' | 'alumni';
 interface MemberTableProps {
   members: Member[];
   onHover?: (slug: string | null) => void;
+  highlightSlug?: string | null;
 }
 
 function getInitials(name: string) {
@@ -32,7 +33,7 @@ function stripProtocol(url: string) {
   return url.replace(/^https?:\/\//, '').replace(/\/$/, '');
 }
 
-export default function MemberTable({ members, onHover }: MemberTableProps) {
+export default function MemberTable({ members, onHover, highlightSlug }: MemberTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>({ departments: [], roles: [] });
   const [memberTypeFilter, setMemberTypeFilter] = useState<MemberTypeFilter>('all');
@@ -117,6 +118,7 @@ export default function MemberTable({ members, onHover }: MemberTableProps) {
                 <tr
                   key={member.id}
                   id={`member-row-${member.slug}`}
+                  className={highlightSlug === member.slug ? 'is-highlighted' : undefined}
                   onMouseEnter={() => onHover?.(member.slug)}
                   onMouseLeave={() => onHover?.(null)}
                   onClick={() => window.open(member.website, '_blank', 'noopener')}
@@ -138,6 +140,12 @@ export default function MemberTable({ members, onHover }: MemberTableProps) {
                         </div>
                       )}
                       <span className="member-name">{member.name}</span>
+                      {member.member_type === 'alumni' && (
+                        <span className="member-type-badge alumni">alumni</span>
+                      )}
+                      {member.member_type === 'student' && (
+                        <span className="member-type-badge">current</span>
+                      )}
                     </div>
                   </td>
 

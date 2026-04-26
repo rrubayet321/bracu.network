@@ -52,6 +52,7 @@ html {
 
 body {
   background-color: var(--bg-primary);
+  background-image: radial-gradient(ellipse at top, rgba(94, 106, 210, 0.04), transparent 60%);
   color: var(--text-primary);
   font-family: var(--font);
   font-size: 14px;
@@ -93,8 +94,8 @@ a:hover { color: var(--text-primary); }
 
 .main-grid {
   display: grid;
-  grid-template-columns: 1fr 420px;
-  gap: 48px;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 40px;
   align-items: start;
 }
 
@@ -125,7 +126,7 @@ a:hover { color: var(--text-primary); }
 }
 
 .energy-beam {
-  animation: beamTravel 4s infinite linear;
+  animation: beamTravel 6s infinite linear;
 }
 
 .animated-hero-wrapper {
@@ -138,7 +139,7 @@ a:hover { color: var(--text-primary); }
 
 .animated-hero-svg-container {
   width: 100%;
-  max-width: 640px;
+  max-width: 720px;
   overflow: visible;
   margin-bottom: 0;
 }
@@ -183,15 +184,13 @@ a:hover { color: var(--text-primary); }
 }
 
 .hero-title {
-  font-size: clamp(2.75rem, 6vw, 3.75rem);
+  font-size: clamp(3.25rem, 7.5vw, 5rem);
   font-weight: 700;
   color: #ffffff;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.045em;
   margin-bottom: 14px;
   text-align: center;
-  text-shadow:
-    0 0 20px rgba(94, 106, 210, 0.4),
-    0 0 40px rgba(94, 106, 210, 0.2);
+  text-shadow: 0 0 28px rgba(94, 106, 210, 0.22);
 }
 
 .hero-description {
@@ -423,7 +422,8 @@ a:hover { color: var(--text-primary); }
   cursor: pointer;
   transition: background-color var(--transition);
 }
-.member-table tbody tr:hover { background-color: rgba(255,255,255,0.025); }
+.member-table tbody tr:hover { background-color: rgba(94,106,210,0.04); }
+.member-table tbody tr.is-highlighted { background-color: rgba(94,106,210,0.07); }
 .member-table tbody tr:last-child { border-bottom: none; }
 
 .member-table td {
@@ -523,9 +523,9 @@ a:hover { color: var(--text-primary); }
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  aspect-ratio: 1;
   width: 100%;
-  max-height: 420px;
+  min-height: 480px;
+  position: relative;
 }
 
 .graph-canvas {
@@ -533,6 +533,19 @@ a:hover { color: var(--text-primary); }
   width: 100%;
   height: 100%;
   cursor: default;
+  position: absolute;
+  inset: 0;
+}
+
+.graph-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
 /* ─── Buttons ────────────────────────────────────────────────────────── */
@@ -710,6 +723,10 @@ a:hover { color: var(--text-primary); }
   font-size: 14px;
   line-height: 1;
   transition: transform 0.18s ease;
+}
+
+.btn-back-label {
+  font-size: 13px;
 }
 
 .btn-back:hover .btn-back-arrow {
@@ -1076,6 +1093,142 @@ a:hover { color: var(--text-primary); }
   gap: 8px;
 }
 
+/* ─── Join form: progress steps ─────────────────────────────────────── */
+.form-progress {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin-bottom: 32px;
+  justify-content: space-between;
+}
+
+.form-progress-bar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: var(--border);
+  z-index: 0;
+}
+
+.form-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.form-progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 1;
+  flex: 1;
+}
+
+.form-progress-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: all var(--transition);
+}
+
+.form-progress-step.active .form-progress-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  box-shadow: 0 0 0 3px rgba(94, 106, 210, 0.2);
+}
+
+.form-progress-step.done .form-progress-dot {
+  background: rgba(94, 106, 210, 0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.form-progress-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.form-progress-step.active .form-progress-label {
+  color: var(--text-primary);
+}
+
+/* Step panels — hide inactive */
+.form-step-panel {
+  display: none;
+}
+.form-step-panel.active {
+  display: block;
+}
+
+/* Step nav buttons */
+.form-step-nav {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+  justify-content: flex-end;
+}
+
+/* Input with icon (valid checkmark / URL) */
+.form-input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-input-with-icon .form-input {
+  padding-right: 28px;
+}
+
+.form-valid-icon {
+  position: absolute;
+  right: 4px;
+  color: #4ade80;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.input-error {
+  border-bottom-color: rgba(239, 68, 68, 0.6) !important;
+}
+
+/* Char counter */
+.char-counter {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* Drag-and-drop highlight */
+.file-upload-area.dragging {
+  border-color: var(--accent);
+  background-color: var(--accent-dim);
+}
+
 /* ─── Page: /join ────────────────────────────────────────────────────── */
 .join-wrapper {
   max-width: 600px;
@@ -1136,9 +1289,10 @@ a:hover { color: var(--text-primary); }
 }
 
 .success-icon {
-  font-size: 40px;
-  margin-bottom: 20px;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
 }
 
 .success-title {
@@ -1235,13 +1389,77 @@ a:hover { color: var(--text-primary); }
 }
 
 .site-footer-motto {
-  font-style: italic;
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.15);
 }
 
 .site-footer-sep {
   color: rgba(255, 255, 255, 0.1);
   font-size: 14px;
+}
+
+/* ─── Member type badge ──────────────────────────────────────────────── */
+.member-type-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  text-transform: lowercase;
+  background: rgba(94, 106, 210, 0.10);
+  color: var(--accent);
+  border: 1px solid rgba(94, 106, 210, 0.22);
+  margin-left: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.member-type-badge.alumni {
+  background: rgba(168, 85, 247, 0.10);
+  color: #a78bfa;
+  border-color: rgba(168, 85, 247, 0.22);
+}
+
+/* Admin member-type badge */
+.admin-type-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: lowercase;
+}
+
+.admin-type-badge.student {
+  background: rgba(94, 106, 210, 0.10);
+  color: var(--accent);
+  border: 1px solid rgba(94, 106, 210, 0.22);
+}
+
+.admin-type-badge.alumni {
+  background: rgba(168, 85, 247, 0.10);
+  color: #a78bfa;
+  border: 1px solid rgba(168, 85, 247, 0.22);
+}
+
+.admin-type-select {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 12px;
+  padding: 3px 8px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.admin-type-select:focus {
+  border-color: var(--border-accent);
 }
 
 /* ─── Utility ────────────────────────────────────────────────────────── */

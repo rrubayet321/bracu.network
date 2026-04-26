@@ -13,6 +13,7 @@ export default function JoinPage() {
       <div className="join-header">
         <Link href="/" className="btn-back" aria-label="Back to bracu.network home">
           <span className="btn-back-arrow">←</span>
+          <span className="btn-back-label">Home</span>
         </Link>
         <h1 className="join-title">Join the network</h1>
         <p className="join-subtitle">

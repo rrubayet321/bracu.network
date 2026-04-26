@@ -193,21 +193,18 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
   }
 
   // ── Insert via adminClient (bypasses RLS) ─────────────────────────
-  const extendedInsertPayload = {
+  const insertPayload = {
     slug,
     name: data.name,
     student_id: data.student_id,
     member_type: data.member_type,
     website: data.website,
     department: data.department,
-    batch: data.batch || null, // joining semester at BRACU
-    joined_semester: data.batch || null,
+    batch: data.batch || null,
     residential_semester: data.residential_semester || null,
     residential_semester_public: data.residential_semester_public === 'true',
     current_semester: data.current_semester || null,
     expected_graduation_semester: data.expected_graduation_semester || null,
-    alumni_work_sector: data.alumni_work_sector || null,
-    alumni_field_alignment: data.alumni_field_alignment || null,
     email: data.email || null,
     bracu_email: data.bracu_email || null,
     instagram: data.instagram || null,
@@ -217,42 +214,16 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
     profile_pic: profilePicUrl,
     roles,
     interests,
-    connections: [],
     is_approved: false,
   };
 
-  // Attempt to persist new profile fields first.
-  let { error: insertError } = await admin.from('members').insert(extendedInsertPayload);
-
-  // Backward-compat fallback for databases that do not yet have the new columns.
-  if (insertError && /column/i.test(insertError.message ?? '')) {
-    const { error: fallbackError } = await admin.from('members').insert({
-      slug,
-      name: data.name,
-      website: data.website,
-      department: data.department,
-      batch: data.batch || null,
-      email: data.email || null,
-      bracu_email: data.bracu_email || null,
-      instagram: data.instagram || null,
-      twitter: data.twitter || null,
-      linkedin: data.linkedin || null,
-      github: data.github || null,
-      profile_pic: profilePicUrl,
-      roles,
-      interests,
-      connections: [],
-      is_approved: false,
-    });
-    insertError = fallbackError;
-  }
-
-  if (insertError?.code === '23505') {
-    return { error: 'A member with this website URL already exists.' };
-  }
+  const { error: insertError } = await admin.from('members').insert(insertPayload);
 
   if (insertError) {
-    console.error('Insert error:', insertError);
+    console.error('Insert error details:', insertError);
+    if (insertError.code === '23505') {
+      return { error: 'A member with this website URL or slug already exists.' };
+    }
     return { error: 'Submission failed. Please try again.' };
   }
 

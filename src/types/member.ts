@@ -29,11 +29,6 @@ export interface Member {
   updated_at: string;
 }
 
-export interface Connection {
-  fromId: string;
-  toId: string;
-}
-
 export const ROLE_OPTIONS = [
   'engineering',
   'design',

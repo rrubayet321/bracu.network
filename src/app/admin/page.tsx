@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { getAdminClient } from '@/lib/supabase/admin-server';
 import AdminMemberCard from '@/components/AdminMemberCard';
-import { signOut, removeMemberFormAction } from './actions';
+import { signOut } from './actions';
 import type { Member } from '@/types/member';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Admin — bracu.network',
@@ -18,10 +20,10 @@ export default async function AdminPage() {
     .eq('is_approved', false)
     .order('created_at', { ascending: true });
 
-  // Fetch recently approved (last 10)
+  // Fetch recently approved (last 10) — full select so AdminMemberCard has all fields
   const { data: approved } = await admin
     .from('members')
-    .select('id, slug, name, website, department, batch, created_at')
+    .select('*')
     .eq('is_approved', true)
     .order('created_at', { ascending: false })
     .limit(10);
@@ -68,54 +70,10 @@ export default async function AdminPage() {
       {/* Recently approved */}
       {approved && approved.length > 0 && (
         <section style={{ marginTop: 48 }}>
-          <p className="admin-section-title">Recently Approved</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {approved.map((m) => (
-              <div
-                key={m.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  background: 'var(--bg-secondary)',
-                  borderRadius: 'var(--radius)',
-                  border: '1px solid var(--border)',
-                  fontSize: 13,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-                    {m.name}
-                  </span>
-                  <a
-                    href={m.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'var(--accent)', fontSize: 12 }}
-                  >
-                    {m.website}
-                  </a>
-                </div>
-                <form action={removeMemberFormAction}>
-                  <input type="hidden" name="id" value={m.id} />
-                  <button 
-                    type="submit" 
-                    style={{ 
-                      background: 'transparent', 
-                      border: '1px solid var(--border)', 
-                      color: 'var(--text-muted)', 
-                      padding: '4px 8px', 
-                      borderRadius: '4px', 
-                      fontSize: 12,
-                      cursor: 'pointer' 
-                    }}
-                  >
-                    Remove
-                  </button>
-                </form>
-              </div>
-            ))}
-          </div>
+          <p className="admin-section-title">Recently Approved ({approved.length})</p>
+          {(approved as Member[]).map((member) => (
+            <AdminMemberCard key={member.id} member={member} isApproved />
+          ))}
         </section>
       )}
     </div>
