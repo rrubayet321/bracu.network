@@ -14,6 +14,9 @@ A webring connecting designers, engineers, researchers, and founders — all fro
 
 </div>
 
+**[▶ Watch the launch video](video/bracu-network.mp4)**  
+<sub>Dark · 14 s · 1920 × 1080 — disciplines form a ring, the orbiting pulse traces the webring, then `bracu.network` lands.</sub>
+
 ---
 
 ## What is this?
@@ -251,6 +254,10 @@ This renders a small navigation bar linking to the previous and next member in t
 ## Project structure
 
 ```
+video/
+└── index.html          # HyperFrames composition (GSAP, 1920×1080, 14 s)
+└── bracu-network.mp4   # Rendered launch video
+
 src/
 ├── app/
 │   ├── admin/          # Protected admin dashboard (approve/reject/remove/setType)

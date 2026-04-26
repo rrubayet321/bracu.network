@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>bracu.network — launch</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #08090a; overflow: hidden; }
+
+    #wordmark {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%) translateY(0px);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 108px;
+      font-weight: 700;
+      letter-spacing: -0.046em;
+      color: #ffffff;
+      white-space: nowrap;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+
+<!--
+  bracu.network — launch motion video
+  HyperFrames composition · 1920 × 1080 · 14 seconds · 30 fps
+
+  Storyboard:
+    0.0–0.8s   Black
+    0.8–2.4s   Four discipline nodes appear one-by-one on the ring
+    2.4–4.2s   Ring draws itself clockwise
+    4.2–5.0s   Chord connections fade in
+    5.0–8.0s   Orbiting pulse dot makes one full revolution
+    7.5s        bracu.network wordmark rises — ring/nodes blur back
+    9.0–11.5s  Full composition holds (wordmark prominent)
+    11.5–14s   Fade to black
+
+  Render:
+    npx hyperframes render --output bracu-network.mp4
+-->
+
+<div id="root"
+     data-composition-id="bracu-network-launch"
+     data-start="0"
+     data-width="1920"
+     data-height="1080">
+
+  <!-- ── 0. Background ──────────────────────────────────────────────── -->
+  <div id="bg" class="clip"
+       data-start="0" data-duration="14" data-track-index="0"
+       style="position:absolute; inset:0; background:#08090a;">
+  </div>
+
+  <!-- ── 1. Radial glow ─────────────────────────────────────────────── -->
+  <div id="glow" class="clip"
+       data-start="0.5" data-duration="12.5" data-track-index="1"
+       style="
+         position:absolute; inset:0;
+         background: radial-gradient(
+           ellipse 800px 700px at 50% 40%,
+           rgba(94,106,210,0.065) 0%,
+           rgba(94,106,210,0.02) 45%,
+           transparent 70%
+         );
+         opacity:0;
+       ">
+  </div>
+
+  <!-- ── 2. SVG — ring, chords, nodes, labels, pulse ────────────────── -->
+  <!--
+    Ring centre: (960, 432)  Radius: 216 px  Circumference ≈ 1357 px
+    Nodes:
+      DESIGNERS   top    (960,  216)
+      ENGINEERS   right  (1176, 432)
+      RESEARCHERS bottom (960,  648)
+      FOUNDERS    left   (744,  432)
+  -->
+  <svg id="svg-layer" class="clip"
+       data-start="0" data-duration="14" data-track-index="2"
+       style="position:absolute; inset:0; width:100%; height:100%; overflow:visible;">
+
+    <defs>
+      <filter id="fNode" x="-200%" y="-200%" width="500%" height="500%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="fPulse" x="-300%" y="-300%" width="700%" height="700%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+
+    <!-- Ring (drawn via stroke-dashoffset) -->
+    <circle id="ring"
+            cx="960" cy="432" r="216"
+            fill="none"
+            stroke="rgba(255,255,255,0.10)"
+            stroke-width="1.2"
+            stroke-dasharray="1357"
+            stroke-dashoffset="1357"/>
+
+    <!-- Chord: DESIGNERS ↔ RESEARCHERS (vertical) -->
+    <line id="chord-v"
+          x1="960" y1="216" x2="960" y2="648"
+          stroke="rgba(255,255,255,0.11)"
+          stroke-width="0.75" opacity="0"/>
+
+    <!-- Chord: ENGINEERS ↔ FOUNDERS (horizontal) -->
+    <line id="chord-h"
+          x1="1176" y1="432" x2="744" y2="432"
+          stroke="rgba(255,255,255,0.11)"
+          stroke-width="0.75" opacity="0"/>
+
+    <!-- Node: DESIGNERS (top) -->
+    <circle id="n0" cx="960"  cy="216" r="0" fill="rgba(255,255,255,0.90)" filter="url(#fNode)"/>
+    <text   id="l0" x="960"  y="175"  text-anchor="middle" fill="rgba(255,255,255,0)"
+            font-family="Inter,-apple-system,sans-serif" font-size="19" font-weight="500" letter-spacing="0.13em">DESIGNERS</text>
+
+    <!-- Node: ENGINEERS (right) -->
+    <circle id="n1" cx="1176" cy="432" r="0" fill="rgba(255,255,255,0.90)" filter="url(#fNode)"/>
+    <text   id="l1" x="1214" y="438"  text-anchor="start"  fill="rgba(255,255,255,0)"
+            font-family="Inter,-apple-system,sans-serif" font-size="19" font-weight="500" letter-spacing="0.13em">ENGINEERS</text>
+
+    <!-- Node: RESEARCHERS (bottom) -->
+    <circle id="n2" cx="960"  cy="648" r="0" fill="rgba(255,255,255,0.90)" filter="url(#fNode)"/>
+    <text   id="l2" x="960"  y="695"  text-anchor="middle" fill="rgba(255,255,255,0)"
+            font-family="Inter,-apple-system,sans-serif" font-size="19" font-weight="500" letter-spacing="0.13em">RESEARCHERS</text>
+
+    <!-- Node: FOUNDERS (left) -->
+    <circle id="n3" cx="744"  cy="432" r="0" fill="rgba(255,255,255,0.90)" filter="url(#fNode)"/>
+    <text   id="l3" x="706"  y="438"  text-anchor="end"    fill="rgba(255,255,255,0)"
+            font-family="Inter,-apple-system,sans-serif" font-size="19" font-weight="500" letter-spacing="0.13em">FOUNDERS</text>
+
+    <!-- Orbiting pulse dot -->
+    <circle id="pulse" cx="960" cy="216" r="6.5"
+            fill="rgba(255,255,255,0.95)" opacity="0" filter="url(#fPulse)"/>
+
+  </svg>
+
+  <!-- ── 3. Wordmark — separate layer so SVG can blur independently ── -->
+  <div id="wordmark" class="clip"
+       data-start="0" data-duration="14" data-track-index="3">
+    bracu.network
+  </div>
+
+  <!-- ── 4. Outro black overlay ─────────────────────────────────────── -->
+  <div id="outro" class="clip"
+       data-start="11.5" data-duration="2.5" data-track-index="4"
+       style="position:absolute; inset:0; background:#08090a; opacity:0; pointer-events:none;">
+  </div>
+
+  <!-- ── GSAP ──────────────────────────────────────────────────────── -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+  <script>
+    /* Ring geometry */
+    const CX = 960, CY = 432, R = 216;
+
+    /* Build dense orbit keyframes — 90 steps = smooth circular motion */
+    function orbitKeyframes(steps, totalSec) {
+      const frames = [];
+      for (let i = 0; i <= steps; i++) {
+        const angle = (i / steps) * Math.PI * 2 - Math.PI / 2; /* start top, clockwise */
+        frames.push({
+          attr: { cx: CX + R * Math.cos(angle), cy: CY + R * Math.sin(angle) },
+          duration: totalSec / steps,
+          ease: 'none',
+        });
+      }
+      return frames;
+    }
+
+    const tl = gsap.timeline({ paused: true });
+
+    /* ── Glow ── */
+    tl.to('#glow', { opacity: 1, duration: 3, ease: 'power2.out' }, 0.5);
+
+    /* ── Nodes pop in one-by-one ── */
+    ['#n0','#n1','#n2','#n3'].forEach((id, i) => {
+      tl.to(id, { attr: { r: 5.5 }, duration: 0.35, ease: 'back.out(2)' }, 0.8 + i * 0.42);
+    });
+
+    /* ── Labels fade in just after their node ── */
+    ['#l0','#l1','#l2','#l3'].forEach((id, i) => {
+      tl.to(id, {
+        attr: { fill: 'rgba(255,255,255,0.36)' }, duration: 0.45, ease: 'power2.out',
+      }, 0.95 + i * 0.42);
+    });
+
+    /* ── Ring draws itself ── */
+    tl.to('#ring', { strokeDashoffset: 0, duration: 1.6, ease: 'power2.inOut' }, 2.4);
+
+    /* ── Chord lines ── */
+    tl.to('#chord-v', { opacity: 1, duration: 0.55, ease: 'power2.out' }, 4.2);
+    tl.to('#chord-h', { opacity: 1, duration: 0.55, ease: 'power2.out' }, 4.55);
+
+    /* ── Orbiting pulse dot ── */
+    tl.to('#pulse', { opacity: 1, duration: 0.35, ease: 'power2.out' }, 5.0);
+    tl.to('#pulse', { keyframes: orbitKeyframes(90, 3.0) }, 5.0);
+    tl.to('#pulse', { opacity: 0, duration: 0.5, ease: 'power2.in' }, 7.7);
+
+    /* ── When wordmark enters: blur + dim the entire SVG layer back ── */
+    tl.to('#svg-layer', {
+      opacity: 0.12,
+      filter: 'blur(2.5px)',
+      duration: 1.4,
+      ease: 'power2.out',
+    }, 7.5);
+
+    /* ── Wordmark rises up, becomes the hero ── */
+    tl.fromTo('#wordmark',
+      { opacity: 0, y: 28 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 1.6,
+        ease: 'power3.out',
+      },
+      7.5
+    );
+
+    /* ── Subtle text glow settles ── */
+    tl.to('#wordmark', {
+      textShadow: '0 0 60px rgba(255,255,255,0.12)',
+      duration: 1.2,
+      ease: 'power2.out',
+    }, 9.2);
+
+    /* ── Outro ── */
+    tl.to(['#wordmark', '#svg-layer', '#glow'], {
+      opacity: 0, duration: 1.2, ease: 'power2.in', stagger: 0.04,
+    }, 11.5);
+    tl.to('#outro', { opacity: 1, duration: 1.0, ease: 'power2.in' }, 11.9);
+
+    /* ── Register ── */
+    window.__timelines = window.__timelines || {};
+    window.__timelines['bracu-network-launch'] = tl;
+  </script>
+
+</div>
+</body>
+</html>

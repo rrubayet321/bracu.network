@@ -34,10 +34,10 @@ const RING_NODES: Array<[number, string | null, number]> = [
 ];
 
 function labelAnchor(deg: number): { dx: number; dy: number; textAnchor: 'start' | 'middle' | 'end' } {
-  if (deg === 0)   return { dx: 0,   dy: -14, textAnchor: 'middle' };
-  if (deg === 90)  return { dx: 14,  dy:   4, textAnchor: 'start'  };
-  if (deg === 180) return { dx: 0,   dy:  18, textAnchor: 'middle' };
-  if (deg === 270) return { dx: -14, dy:   4, textAnchor: 'end'    };
+  if (deg === 0)   return { dx: 0,   dy: -16, textAnchor: 'middle' };
+  if (deg === 90)  return { dx: 16,  dy:   4, textAnchor: 'start'  };
+  if (deg === 180) return { dx: 0,   dy:  20, textAnchor: 'middle' };
+  if (deg === 270) return { dx: -16, dy:   4, textAnchor: 'end'    };
   return { dx: 0, dy: 0, textAnchor: 'middle' };
 }
 
@@ -197,7 +197,7 @@ export default function AnimatedHero() {
                 y={ny + dy}
                 textAnchor={textAnchor}
                 fill="rgba(255,255,255,0.38)"
-                fontSize="9"
+                fontSize="11"
                 fontFamily="-apple-system,BlinkMacSystemFont,'Inter',sans-serif"
                 fontWeight="500"
                 letterSpacing="0.09em"

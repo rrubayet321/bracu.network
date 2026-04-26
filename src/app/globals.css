@@ -1694,8 +1694,9 @@ a:hover { color: var(--text-primary); }
 
 /* Slightly wider phones / small tablets */
 @media (max-width: 480px) {
-  /* Hide SVG role labels inside the ring on very small screens */
-  .ring-label { display: none; }
+  /* Labels remain visible; bump font-size so they stay legible
+     as the SVG scales down on narrow screens */
+  .ring-label { font-size: 11px; }
 
   /* Role boxes in hero — shrink font */
   .role-box {
