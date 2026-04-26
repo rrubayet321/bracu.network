@@ -887,10 +887,7 @@ a:hover { color: var(--text-primary); }
 }
 
 .tag-chip::after {
-  content: '×';
-  font-size: 13px;
-  color: var(--text-muted);
-  line-height: 1;
+  content: '';
 }
 
 .tag-chip:hover {
@@ -898,6 +895,49 @@ a:hover { color: var(--text-primary); }
   border-color: rgba(239, 68, 68, 0.35);
   background: rgba(239, 68, 68, 0.06);
   transform: translateY(-1px);
+}
+
+/* Custom suggestion dropdown */
+.tag-suggestion-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--surface, #1a1a1f);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: fadeInDown 0.12s ease;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tag-suggestion-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.tag-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.tag-suggestion-item:hover {
+  background: rgba(94, 106, 210, 0.12);
+  color: var(--text-primary, #fff);
 }
 
 /* File upload */

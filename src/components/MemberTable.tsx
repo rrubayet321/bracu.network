@@ -155,11 +155,6 @@ export default function MemberTable({ members, onHover, highlightSlug }: MemberT
                         <span className="member-type-badge open-to-hire" title="Open to opportunities">open to hire</span>
                       )}
                     </div>
-                    {member.roles?.length > 0 && (
-                      <div className="member-roles">
-                        {member.roles.slice(0, 3).join(' · ')}
-                      </div>
-                    )}
                   </td>
 
                   {/* Department */}

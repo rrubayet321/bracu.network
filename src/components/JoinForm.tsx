@@ -100,6 +100,8 @@ export default function JoinForm() {
   const [roleDraft, setRoleDraft] = useState('');
   const [interestDraft, setInterestDraft] = useState('');
   const [openToHire, setOpenToHire] = useState(false);
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [interestDropdownOpen, setInterestDropdownOpen] = useState(false);
 
   // ── LocalStorage persistence ──────────────────────────────────────
   useEffect(() => {
@@ -688,35 +690,52 @@ export default function JoinForm() {
             Target Roles / What You Do
             <span className="form-hint"> — helps hiring managers find you</span>
           </label>
-          <div className="tag-input-row">
-            <div style={{ flex: 1, position: 'relative' }}>
-              <input
-                id="join-role-input"
-                list="role-suggestions"
-                className="form-input"
-                placeholder="e.g. software engineer, product manager, ai/ml engineer…"
-                value={roleDraft}
-                maxLength={MAX_TAG_LEN}
-                onChange={(e) => setRoleDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') { e.preventDefault(); addTag(roleDraft, roles, setRoles); setRoleDraft(''); }
-                }}
-              />
-              {roleDraft.length > 0 && (
-                <span className="char-counter">{roleDraft.length}/{MAX_TAG_LEN}</span>
-              )}
-            </div>
-            <button type="button" className="btn btn-secondary" onClick={() => { addTag(roleDraft, roles, setRoles); setRoleDraft(''); }}>
-              Add
-            </button>
+          <div style={{ position: 'relative' }}>
+            <input
+              id="join-role-input"
+              className="form-input"
+              placeholder="e.g. software engineer, product manager…"
+              value={roleDraft}
+              maxLength={MAX_TAG_LEN}
+              autoComplete="off"
+              onChange={(e) => { setRoleDraft(e.target.value); setRoleDropdownOpen(true); }}
+              onFocus={() => setRoleDropdownOpen(true)}
+              onBlur={() => setTimeout(() => setRoleDropdownOpen(false), 150)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); addTag(roleDraft, roles, setRoles); setRoleDraft(''); setRoleDropdownOpen(false); }
+                if (e.key === 'Escape') setRoleDropdownOpen(false);
+              }}
+            />
+            {roleDropdownOpen && (() => {
+              const q = roleDraft.toLowerCase();
+              const filtered = roleSuggestions
+                .filter((r) => !roles.includes(r) && (!q || r.includes(q)))
+                .slice(0, 6);
+              return filtered.length > 0 ? (
+                <div className="tag-suggestion-panel">
+                  {filtered.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className="tag-suggestion-item"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        addTag(r, roles, setRoles);
+                        setRoleDraft('');
+                        setRoleDropdownOpen(false);
+                      }}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              ) : null;
+            })()}
           </div>
-          <datalist id="role-suggestions">
-            {roleSuggestions.map((role) => <option key={role} value={role} />)}
-          </datalist>
-          <div className="tag-chip-list">
+          <div className="tag-chip-list" style={{ marginTop: 8 }}>
             {roles.map((role) => (
               <button key={role} type="button" className="tag-chip" onClick={() => removeTag(role, roles, setRoles)} title="Remove">
-                {role}
+                {role} ×
               </button>
             ))}
           </div>
@@ -743,35 +762,52 @@ export default function JoinForm() {
           <label htmlFor="join-interest-input" className="form-label">
             Interests <span className="form-hint">(choose a suggestion or write your own)</span>
           </label>
-          <div className="tag-input-row">
-            <div style={{ flex: 1, position: 'relative' }}>
-              <input
-                id="join-interest-input"
-                list="interest-suggestions"
-                className="form-input"
-                placeholder={selectedDepartment ? 'Type an interest and press Add' : 'Select department first (step 1)'}
-                value={interestDraft}
-                maxLength={MAX_TAG_LEN}
-                onChange={(e) => setInterestDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') { e.preventDefault(); addTag(interestDraft, interests, setInterests); setInterestDraft(''); }
-                }}
-              />
-              {interestDraft.length > 0 && (
-                <span className="char-counter">{interestDraft.length}/{MAX_TAG_LEN}</span>
-              )}
-            </div>
-            <button type="button" className="btn btn-secondary" onClick={() => { addTag(interestDraft, interests, setInterests); setInterestDraft(''); }}>
-              Add
-            </button>
+          <div style={{ position: 'relative' }}>
+            <input
+              id="join-interest-input"
+              className="form-input"
+              placeholder={selectedDepartment ? 'Type an interest…' : 'Select department first (step 1)'}
+              value={interestDraft}
+              maxLength={MAX_TAG_LEN}
+              autoComplete="off"
+              onChange={(e) => { setInterestDraft(e.target.value); setInterestDropdownOpen(true); }}
+              onFocus={() => setInterestDropdownOpen(true)}
+              onBlur={() => setTimeout(() => setInterestDropdownOpen(false), 150)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); addTag(interestDraft, interests, setInterests); setInterestDraft(''); setInterestDropdownOpen(false); }
+                if (e.key === 'Escape') setInterestDropdownOpen(false);
+              }}
+            />
+            {interestDropdownOpen && (() => {
+              const q = interestDraft.toLowerCase();
+              const filtered = interestSuggestions
+                .filter((i) => !interests.includes(i) && (!q || i.includes(q)))
+                .slice(0, 6);
+              return filtered.length > 0 ? (
+                <div className="tag-suggestion-panel">
+                  {filtered.map((i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className="tag-suggestion-item"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        addTag(i, interests, setInterests);
+                        setInterestDraft('');
+                        setInterestDropdownOpen(false);
+                      }}
+                    >
+                      {i}
+                    </button>
+                  ))}
+                </div>
+              ) : null;
+            })()}
           </div>
-          <datalist id="interest-suggestions">
-            {interestSuggestions.map((interest) => <option key={interest} value={interest} />)}
-          </datalist>
-          <div className="tag-chip-list">
+          <div className="tag-chip-list" style={{ marginTop: 8 }}>
             {interests.map((interest) => (
               <button key={interest} type="button" className="tag-chip" onClick={() => removeTag(interest, interests, setInterests)} title="Remove">
-                {interest}
+                {interest} ×
               </button>
             ))}
           </div>
