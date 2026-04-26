@@ -122,15 +122,14 @@ cp .env.example .env.local
 
 ### Environment variables
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key   # server-only, never public
+For security, this README does not include inline key values.
+Use `.env.example` as the only template source:
 
-# Optional analytics
-NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
-NEXT_PUBLIC_CLARITY_PROJECT_ID=xxxxxxxxxx
+```bash
+cp .env.example .env.local
 ```
+
+Then fill in your own values locally. Never commit real secrets.
 
 ### Database
 
