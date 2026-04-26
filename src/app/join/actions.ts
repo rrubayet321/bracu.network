@@ -211,8 +211,8 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
     residential_semester_public: data.residential_semester_public === 'true',
     current_semester: data.current_semester || null,
     expected_graduation_semester: data.expected_graduation_semester || null,
-    alumni_work_sector: data.alumni_work_sector || null,
-    alumni_field_alignment: data.alumni_field_alignment || null,
+    ...(data.alumni_work_sector ? { alumni_work_sector: data.alumni_work_sector } : {}),
+    ...(data.alumni_field_alignment ? { alumni_field_alignment: data.alumni_field_alignment } : {}),
     email: data.email || null,
     bracu_email: data.bracu_email || null,
     instagram: data.instagram || null,
@@ -230,10 +230,7 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
   if (insertError) {
     console.error('Insert error details:', insertError);
     if (insertError.code === '23505') {
-      return { error: 'A member with this website URL or slug already exists.' };
-    }
-    if (insertError.code === '23502' && /website/i.test(insertError.message ?? '')) {
-      return { error: 'Please add at least one public link (website or social profile).' };
+      return { error: 'A member with this student ID or slug already exists.' };
     }
     return { error: 'Submission failed. Please try again.' };
   }
