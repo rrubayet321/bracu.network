@@ -17,7 +17,9 @@ const memberSchema = z.object({
   website: z
     .string()
     .url('Must be a valid URL')
-    .refine((u) => u.startsWith('https://'), 'Website must use HTTPS'),
+    .refine((u) => u.startsWith('https://'), 'Website must use HTTPS')
+    .optional()
+    .or(z.literal('')),
   department: z.enum(DEPARTMENT_OPTIONS, { error: 'Select a valid department' }),
   batch: z
     .string()
@@ -192,13 +194,16 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
     slug = `${baseSlug}-${crypto.randomUUID().slice(0, 4)}`;
   }
 
+  const primaryWebsite =
+    data.website || data.linkedin || data.github || data.instagram || data.twitter || null;
+
   // ── Insert via adminClient (bypasses RLS) ─────────────────────────
   const insertPayload = {
     slug,
     name: data.name,
     student_id: data.student_id,
     member_type: data.member_type,
-    website: data.website,
+    website: primaryWebsite,
     department: data.department,
     batch: data.batch || null,
     residential_semester: data.residential_semester || null,
@@ -223,6 +228,9 @@ export async function submitJoinRequest(formData: FormData): Promise<JoinActionR
     console.error('Insert error details:', insertError);
     if (insertError.code === '23505') {
       return { error: 'A member with this website URL or slug already exists.' };
+    }
+    if (insertError.code === '23502' && /website/i.test(insertError.message ?? '')) {
+      return { error: 'Please add at least one public link (website or social profile).' };
     }
     return { error: 'Submission failed. Please try again.' };
   }

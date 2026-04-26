@@ -331,7 +331,7 @@ export default function JoinForm() {
 
         <div className="form-group">
           <label htmlFor="join-website" className="form-label">
-            Personal Website <span className="required">*</span>
+            Personal Website / Portfolio
           </label>
           <div className="form-input-with-icon">
             <input
@@ -342,13 +342,12 @@ export default function JoinForm() {
               placeholder="https://yoursite.com"
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
-              required
             />
             {isValidUrl(website) && website.startsWith('https://') && (
               <Check size={14} className="form-valid-icon" />
             )}
           </div>
-          <span className="form-hint">Must be a working HTTPS URL</span>
+          <span className="form-hint">Optional. Add if you have one (must be HTTPS).</span>
           {fieldError('website')}
         </div>
 

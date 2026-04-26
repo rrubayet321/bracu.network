@@ -62,14 +62,18 @@ export default function AdminMemberCard({ member, isApproved = false }: AdminMem
         {member.batch && (
           <div className="admin-card-meta">{member.batch}</div>
         )}
-        <a
-          href={member.website}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="admin-card-website"
-        >
-          {member.website}
-        </a>
+        {member.website ? (
+          <a
+            href={member.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="admin-card-website"
+          >
+            {member.website}
+          </a>
+        ) : (
+          <div className="admin-card-meta">No public website provided</div>
+        )}
         {member.bracu_email && (
           <div className="admin-card-meta" style={{ marginTop: 4, color: 'var(--accent)' }}>
             BRACU Email: {member.bracu_email}

@@ -23,7 +23,7 @@ export async function GET() {
   }
 
   const supabase = await createClient();
-  let data: { slug: string; name: string; website: string }[] | null = null;
+  let data: { slug: string; name: string; website: string | null }[] | null = null;
   let error: { message: string } | null = null;
   try {
     const result = await withTimeout(
@@ -31,6 +31,8 @@ export async function GET() {
         .from('members')
         .select('slug, name, website')
         .eq('is_approved', true)
+        .not('website', 'is', null)
+        .neq('website', '')
         .order('created_at', { ascending: true }),
       API_QUERY_MS,
       () => {}

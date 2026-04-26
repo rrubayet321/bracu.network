@@ -13,7 +13,7 @@ export interface Member {
   alumni_field_alignment?: 'own_field' | 'other_field';
   email?: string;
   bracu_email?: string;
-  website: string;
+  website?: string | null;
   department?: string;
   batch?: string;
   roles: string[];

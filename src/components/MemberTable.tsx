@@ -46,7 +46,7 @@ export default function MemberTable({ members, onHover, highlightSlug }: MemberT
         !q ||
         m.name.toLowerCase().includes(q) ||
         m.department?.toLowerCase().includes(q) ||
-        m.website.toLowerCase().includes(q);
+        (m.website?.toLowerCase().includes(q) ?? false);
 
       // Department filter
       const matchesDept =
@@ -121,7 +121,8 @@ export default function MemberTable({ members, onHover, highlightSlug }: MemberT
                   className={highlightSlug === member.slug ? 'is-highlighted' : undefined}
                   onMouseEnter={() => onHover?.(member.slug)}
                   onMouseLeave={() => onHover?.(null)}
-                  onClick={() => window.open(member.website, '_blank', 'noopener')}
+                  onClick={() => member.website && window.open(member.website, '_blank', 'noopener')}
+                  style={{ cursor: member.website ? 'pointer' : 'default' }}
                 >
                   {/* Name + Avatar */}
                   <td>
@@ -158,15 +159,19 @@ export default function MemberTable({ members, onHover, highlightSlug }: MemberT
 
                   {/* Website */}
                   <td>
-                    <a
-                      href={member.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="member-site-link"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {stripProtocol(member.website)}
-                    </a>
+                    {member.website ? (
+                      <a
+                        href={member.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="member-site-link"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {stripProtocol(member.website)}
+                      </a>
+                    ) : (
+                      <span className="member-site-link" style={{ color: 'var(--text-muted)' }}>—</span>
+                    )}
                   </td>
 
                   {/* Social Icons */}
