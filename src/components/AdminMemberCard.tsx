@@ -106,7 +106,7 @@ export default function AdminMemberCard({ member, isApproved = false }: AdminMem
               setActionError(null);
               startTypeChange(async () => {
                 const res = await setMemberType(member.id, val);
-                if (res && 'error' in res) setActionError(res.error);
+                if (res && 'error' in res) setActionError(res.error ?? null);
               });
             }}
           >
@@ -144,7 +144,7 @@ export default function AdminMemberCard({ member, isApproved = false }: AdminMem
               setActionError(null);
               startRemove(async () => {
                 const res = await removeMember(member.id);
-                if (res && 'error' in res) setActionError(res.error);
+                if (res && 'error' in res) setActionError(res.error ?? null);
               });
             }}
           >
@@ -161,7 +161,7 @@ export default function AdminMemberCard({ member, isApproved = false }: AdminMem
                 setActionError(null);
                 startApprove(async () => {
                   const res = await approveMember(member.id);
-                  if (res && 'error' in res) setActionError(res.error);
+                  if (res && 'error' in res) setActionError(res.error ?? null);
                 });
               }}
             >
@@ -177,7 +177,7 @@ export default function AdminMemberCard({ member, isApproved = false }: AdminMem
                 setActionError(null);
                 startReject(async () => {
                   const res = await rejectMember(member.id);
-                  if (res && 'error' in res) setActionError(res.error);
+                  if (res && 'error' in res) setActionError(res.error ?? null);
                 });
               }}
             >
