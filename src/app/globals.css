@@ -1767,36 +1767,52 @@ a:hover { color: var(--text-primary); }
     table-layout: fixed;
   }
 
-  .member-table thead th:nth-child(2),
   .member-table thead th:nth-child(3),
-  .member-table tbody td:nth-child(2),
   .member-table tbody td:nth-child(3) {
     display: none;
   }
 
   .member-table th:nth-child(1),
   .member-table td:nth-child(1) {
-    width: 70%;
+    width: 40%;
+  }
+
+  .member-table th:nth-child(2),
+  .member-table td:nth-child(2) {
+    width: 35%;
+    display: table-cell;
   }
 
   .member-table th:nth-child(4),
   .member-table td:nth-child(4) {
-    width: 30%;
+    width: 25%;
   }
 
   .member-table td {
-    padding: 14px 8px 14px 0;
+    padding: 12px 6px 12px 0;
+  }
+
+  .member-dept {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.3;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .member-name-cell {
     flex-wrap: wrap;
-    align-items: flex-start;
-    column-gap: 10px;
-    row-gap: 6px;
+    align-items: center;
+    column-gap: 6px;
+    row-gap: 2px;
   }
 
   .member-type-badge {
-    margin-left: 0;
+    font-size: 9px;
+    padding: 0px 4px;
   }
 
   .member-name {
@@ -1804,26 +1820,24 @@ a:hover { color: var(--text-primary); }
     line-height: 1.4;
     white-space: normal;
     word-break: break-word;
-    flex: 1 1 8rem;
+    flex: 1 1 5rem;
     min-width: 0;
-    overflow: visible;
-    text-overflow: clip;
   }
 
   .member-table td:nth-child(4) {
-    vertical-align: top;
-    padding-top: 16px;
+    vertical-align: middle;
+    padding-top: 12px;
   }
 
   .member-table td:nth-child(4) .social-icons {
     flex-wrap: wrap;
     justify-content: flex-end;
-    row-gap: 4px;
+    gap: 4px;
   }
 
   .social-icon-link {
-    min-width: 40px;
-    min-height: 40px;
+    min-width: 34px;
+    min-height: 34px;
     align-items: center;
     justify-content: center;
     border-radius: var(--radius);
