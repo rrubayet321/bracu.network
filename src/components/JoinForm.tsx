@@ -9,11 +9,47 @@ import {
   ROLE_OPTIONS,
   type Department,
 } from '@/types/member';
+import Image from 'next/image';
 import { Upload, CheckCircle2, X, Check } from 'lucide-react';
 
 const STORAGE_KEY = 'bracu_join_form_draft';
 const MAX_TAG_LEN = 60;
 const RATE_LIMIT_SECONDS = 60;
+
+const EMPTY_SOCIAL: Record<string, string> = {
+  github: '', linkedin: '', twitter: '', instagram: '',
+};
+
+type StoredJoinDraft = {
+  name?: string;
+  website?: string;
+  selectedDepartment?: Department | '';
+  memberType?: 'student' | 'alumni' | '';
+  studentId?: string;
+  batch?: string;
+  residentialSemester?: string;
+  currentSemester?: string;
+  expectedGrad?: string;
+  alumniWorkSector?: string;
+  alumniFieldAlignment?: string;
+  bracuEmail?: string;
+  email?: string;
+  socialValues?: Record<string, string>;
+  roles?: string[];
+  interests?: string[];
+  openToHire?: boolean;
+};
+
+function readJoinDraft(): Partial<StoredJoinDraft> | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Partial<StoredJoinDraft>;
+  } catch {
+    return null;
+  }
+}
 
 const SOCIAL_FIELDS = [
   {
@@ -69,23 +105,41 @@ export default function JoinForm() {
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Form field state
-  const [name, setName] = useState('');
-  const [website, setWebsite] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState<Department | ''>('');
-  const [memberType, setMemberType] = useState<'student' | 'alumni' | ''>('');
-  const [studentId, setStudentId] = useState('');
-  const [batch, setBatch] = useState('');
-  const [residentialSemester, setResidentialSemester] = useState('');
-  const [currentSemester, setCurrentSemester] = useState('');
-  const [expectedGrad, setExpectedGrad] = useState('');
-  const [alumniWorkSector, setAlumniWorkSector] = useState('');
-  const [alumniFieldAlignment, setAlumniFieldAlignment] = useState('');
-  const [bracuEmail, setBracuEmail] = useState('');
-  const [email, setEmail] = useState('');
-  const [socialValues, setSocialValues] = useState<Record<string, string>>({
-    github: '', linkedin: '', twitter: '', instagram: '',
-  });
+  const initialDraft = useMemo(() => readJoinDraft(), []);
+
+  const [name, setName] = useState(() => (initialDraft?.name ? String(initialDraft.name) : ''));
+  const [website, setWebsite] = useState(() => (initialDraft?.website ? String(initialDraft.website) : ''));
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | ''>(
+    () => (initialDraft?.selectedDepartment ? initialDraft.selectedDepartment : ''),
+  );
+  const [memberType, setMemberType] = useState<'student' | 'alumni' | ''>(
+    () => (initialDraft?.memberType ? initialDraft.memberType : ''),
+  );
+  const [studentId, setStudentId] = useState(() => (initialDraft?.studentId ? String(initialDraft.studentId) : ''));
+  const [batch, setBatch] = useState(() => (initialDraft?.batch ? String(initialDraft.batch) : ''));
+  const [residentialSemester, setResidentialSemester] = useState(() =>
+    (initialDraft?.residentialSemester ? String(initialDraft.residentialSemester) : ''),
+  );
+  const [currentSemester, setCurrentSemester] = useState(() =>
+    (initialDraft?.currentSemester ? String(initialDraft.currentSemester) : ''),
+  );
+  const [expectedGrad, setExpectedGrad] = useState(() =>
+    (initialDraft?.expectedGrad ? String(initialDraft.expectedGrad) : ''),
+  );
+  const [alumniWorkSector, setAlumniWorkSector] = useState(() =>
+    (initialDraft?.alumniWorkSector ? String(initialDraft.alumniWorkSector) : ''),
+  );
+  const [alumniFieldAlignment, setAlumniFieldAlignment] = useState(() =>
+    (initialDraft?.alumniFieldAlignment ? String(initialDraft.alumniFieldAlignment) : ''),
+  );
+  const [bracuEmail, setBracuEmail] = useState(() =>
+    (initialDraft?.bracuEmail ? String(initialDraft.bracuEmail) : ''),
+  );
+  const [email, setEmail] = useState(() => (initialDraft?.email ? String(initialDraft.email) : ''));
+  const [socialValues, setSocialValues] = useState<Record<string, string>>(() => ({
+    ...EMPTY_SOCIAL,
+    ...(initialDraft?.socialValues && typeof initialDraft.socialValues === 'object' ? initialDraft.socialValues : {}),
+  }));
 
   // Photo
   const [photoName, setPhotoName] = useState<string | null>(null);
@@ -94,41 +148,21 @@ export default function JoinForm() {
   const [isDragging, setIsDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Tags
-  const [roles, setRoles] = useState<string[]>([]);
-  const [interests, setInterests] = useState<string[]>([]);
+  const [roles, setRoles] = useState<string[]>(() =>
+    (Array.isArray(initialDraft?.roles) ? [...initialDraft.roles] : []),
+  );
+  const [interests, setInterests] = useState<string[]>(() =>
+    (Array.isArray(initialDraft?.interests) ? [...initialDraft.interests] : []),
+  );
   const [roleDraft, setRoleDraft] = useState('');
   const [interestDraft, setInterestDraft] = useState('');
-  const [openToHire, setOpenToHire] = useState(false);
+  const [openToHire, setOpenToHire] = useState(
+    () => (typeof initialDraft?.openToHire === 'boolean' ? initialDraft.openToHire : false),
+  );
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [interestDropdownOpen, setInterestDropdownOpen] = useState(false);
 
-  // ── LocalStorage persistence ──────────────────────────────────────
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
-      const d = JSON.parse(saved);
-      if (d.name) setName(d.name);
-      if (d.website) setWebsite(d.website);
-      if (d.selectedDepartment) setSelectedDepartment(d.selectedDepartment);
-      if (d.memberType) setMemberType(d.memberType);
-      if (d.studentId) setStudentId(d.studentId);
-      if (d.batch) setBatch(d.batch);
-      if (d.residentialSemester) setResidentialSemester(d.residentialSemester);
-      if (d.currentSemester) setCurrentSemester(d.currentSemester);
-      if (d.expectedGrad) setExpectedGrad(d.expectedGrad);
-      if (d.alumniWorkSector) setAlumniWorkSector(d.alumniWorkSector);
-      if (d.alumniFieldAlignment) setAlumniFieldAlignment(d.alumniFieldAlignment);
-      if (d.bracuEmail) setBracuEmail(d.bracuEmail);
-      if (d.email) setEmail(d.email);
-      if (d.socialValues) setSocialValues(d.socialValues);
-      if (d.roles) setRoles(d.roles);
-      if (d.interests) setInterests(d.interests);
-      if (typeof d.openToHire === 'boolean') setOpenToHire(d.openToHire);
-    } catch { /* ignore corrupt storage */ }
-  }, []);
-
+  // ── LocalStorage persistence (save) ───────────────────────────────
   useEffect(() => {
     if (success) { localStorage.removeItem(STORAGE_KEY); return; }
     try {
@@ -610,7 +644,14 @@ export default function JoinForm() {
 
           {photoPreview ? (
             <div className="file-upload-preview" id="photo-preview-area">
-              <img src={photoPreview} alt="Profile preview" className="upload-preview-img" />
+              <Image
+                src={photoPreview}
+                alt="Profile preview"
+                width={120}
+                height={120}
+                unoptimized
+                className="upload-preview-img"
+              />
               <div className="upload-preview-info">
                 <div className="upload-preview-badge">
                   <CheckCircle2 size={13} />

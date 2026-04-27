@@ -87,15 +87,17 @@ a:hover { color: var(--text-primary); }
 .page-wrapper {
   position: relative;
   z-index: 1;
-  max-width: 1400px;
+  /* Wider shell so the directory can use more horizontal space on large viewports. */
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 48px 32px;
+  padding: 48px clamp(16px, 4vw, 28px);
 }
 
 .main-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 40px;
+  /* Bias width toward the member table; graph stays a stable secondary column. */
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+  gap: clamp(24px, 2.5vw, 40px);
   align-items: start;
 }
 
@@ -105,15 +107,27 @@ a:hover { color: var(--text-primary); }
 @media (max-width: 900px) {
   .main-grid {
     grid-template-columns: 1fr;
+    gap: clamp(20px, 4vw, 32px);
   }
   .right-col {
     position: static;
     order: -1; /* graph shows above table on mobile */
+    width: 100%;
+    min-width: 0;
+  }
+  .page-wrapper {
+    padding-top: max(32px, env(safe-area-inset-top));
+    padding-bottom: 40px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
   }
 }
 
-@media (max-width: 600px) {
-  .page-wrapper { padding: 24px 16px; }
+/* Home: table panel is the primary surface — a bit more inner width for the grid (not phones). */
+@media (min-width: 641px) {
+  .left-col.panel-card {
+    padding: 20px 22px 24px;
+  }
 }
 
 
@@ -464,10 +478,16 @@ a:hover { color: var(--text-primary); }
 .member-table-container {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .member-table {
   width: 100%;
+  /* Room for names + badges; if the column is still narrower, the container scrolls. */
+  min-width: 50rem;
+  /* Percent widths below only work predictably with fixed layout. */
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
@@ -493,6 +513,11 @@ a:hover { color: var(--text-primary); }
 .member-table tbody tr.is-highlighted { background-color: rgba(94,106,210,0.07); }
 .member-table tbody tr:last-child { border-bottom: none; }
 
+.member-table td,
+.member-table thead th {
+  min-width: 0; /* let fixed-layout cells honor overflow/ellipsis on children */
+}
+
 .member-table td {
   padding: 13px 12px;
   vertical-align: middle;
@@ -501,11 +526,53 @@ a:hover { color: var(--text-primary); }
 }
 .member-table td:first-child { padding-left: 0; }
 
-/* Name cell */
+/* Column shares (total 100%) — keeps name / department / site / links from painting over each other. */
+.member-table th:nth-child(1),
+.member-table td:nth-child(1) {
+  width: 42%;
+  overflow: hidden;
+}
+.member-table th:nth-child(2),
+.member-table td:nth-child(2) {
+  width: 28%;
+  overflow: hidden;
+}
+.member-table th:nth-child(3),
+.member-table td:nth-child(3) {
+  width: 18%;
+  overflow: hidden;
+}
+.member-table th:nth-child(4),
+.member-table td:nth-child(4) {
+  width: 12%;
+  overflow: hidden;
+  text-align: right;
+}
+
+/* Clearer separation between URL and social icons */
+.member-table thead th:nth-child(3),
+.member-table td:nth-child(3) {
+  padding-right: 18px;
+}
+.member-table thead th:nth-child(4),
+.member-table td:nth-child(4) {
+  padding-left: 14px;
+}
+
+.member-table td:nth-child(4) .social-icons {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+/* Name cell — do not let the name flex-grow; keeps badges next to the name, leaves air before dept/site */
 .member-name-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .member-avatar {
@@ -538,11 +605,18 @@ a:hover { color: var(--text-primary); }
   color: var(--text-primary);
   font-size: 14px;
   white-space: nowrap;
+  min-width: 0;
+  /* Only use the width the name needs so status badges sit beside it, not at the far edge */
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
-/* Department cell */
+/* Department cell (must be block-level so max-width + ellipsis apply to long text) */
 .member-dept {
-  max-width: 160px;
+  display: block;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -557,7 +631,7 @@ a:hover { color: var(--text-primary); }
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
-  max-width: 150px;
+  max-width: 100%;
 }
 .member-site-link:hover { color: var(--accent); }
 
@@ -1536,7 +1610,7 @@ a:hover { color: var(--text-primary); }
   background: rgba(94, 106, 210, 0.10);
   color: var(--accent);
   border: 1px solid rgba(94, 106, 210, 0.22);
-  margin-left: 6px;
+  margin-left: 0;
   vertical-align: middle;
   flex-shrink: 0;
 }
@@ -1629,9 +1703,16 @@ a:hover { color: var(--text-primary); }
 
 @media (max-width: 640px) {
 
-  /* ── Page shell ─────────────────────────────────── */
+  /* ── Page shell (safe areas for notched devices) ─ */
   .page-wrapper {
-    padding: 20px 16px 40px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(32px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .page-wrapper > header.hero {
+    margin-bottom: 28px;
   }
 
   /* ── Hero ───────────────────────────────────────── */
@@ -1659,7 +1740,7 @@ a:hover { color: var(--text-primary); }
   }
 
   .animated-hero-wrapper {
-    margin-bottom: 28px;
+    margin-bottom: 24px;
   }
 
   /* ── Main grid — already collapses at 900px,
@@ -1669,9 +1750,23 @@ a:hover { color: var(--text-primary); }
     border-radius: 12px;
   }
 
+  .main-grid {
+    gap: 20px;
+  }
+
+  /* Shorter graph — saves vertical space; still interactive */
+  .graph-container {
+    min-height: min(42vh, 360px);
+  }
+
   /* ── Member table ───────────────────────────────── */
   /* Hide department + site columns on small screens
      (too cramped — keep name, links) */
+  .member-table {
+    min-width: 0; /* allow full width on phone; 4-col % widths don’t apply cleanly */
+    table-layout: fixed;
+  }
+
   .member-table thead th:nth-child(2),
   .member-table thead th:nth-child(3),
   .member-table tbody td:nth-child(2),
@@ -1679,14 +1774,63 @@ a:hover { color: var(--text-primary); }
     display: none;
   }
 
+  .member-table th:nth-child(1),
+  .member-table td:nth-child(1) {
+    width: 70%;
+  }
+
+  .member-table th:nth-child(4),
+  .member-table td:nth-child(4) {
+    width: 30%;
+  }
+
   .member-table td {
-    padding: 12px 8px;
+    padding: 14px 8px 14px 0;
+  }
+
+  .member-name-cell {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    column-gap: 10px;
+    row-gap: 6px;
+  }
+
+  .member-type-badge {
+    margin-left: 0;
   }
 
   .member-name {
     font-size: 13px;
+    line-height: 1.4;
     white-space: normal;
     word-break: break-word;
+    flex: 1 1 8rem;
+    min-width: 0;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .member-table td:nth-child(4) {
+    vertical-align: top;
+    padding-top: 16px;
+  }
+
+  .member-table td:nth-child(4) .social-icons {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 4px;
+  }
+
+  .social-icon-link {
+    min-width: 40px;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+  }
+
+  .social-icon-link:active {
+    background: rgba(255, 255, 255, 0.06);
   }
 
   /* ── Filter dropdown ────────────────────────────── */
@@ -1698,13 +1842,39 @@ a:hover { color: var(--text-primary); }
     max-height: 60vh;
   }
 
-  /* ── Search bar ─────────────────────────────────── */
+  /* ── Search & filters (touch + no iOS input zoom) ─ */
   .search-bar-wrapper {
     flex-wrap: wrap;
+    align-items: stretch;
+    gap: 10px;
   }
 
   .search-input-container {
     width: 100%;
+    min-width: 0;
+  }
+
+  .search-input {
+    min-height: 44px;
+    padding: 10px 12px 10px 38px;
+    font-size: 16px;
+  }
+
+  .search-icon {
+    left: 14px;
+  }
+
+  .filter-btn {
+    min-height: 44px;
+    padding: 10px 14px;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .filter-member-type-select {
+    min-height: 44px;
+    width: 100%;
+    max-width: 100%;
   }
 
   /* ── Join page ──────────────────────────────────── */
@@ -1780,7 +1950,7 @@ a:hover { color: var(--text-primary); }
     flex-direction: column;
     gap: 6px;
     text-align: center;
-    padding: 16px 16px 24px;
+    padding: 16px max(16px, env(safe-area-inset-left)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right));
   }
 
   .site-footer-sep {
@@ -1799,6 +1969,14 @@ a:hover { color: var(--text-primary); }
 
 /* Slightly wider phones / small tablets */
 @media (max-width: 480px) {
+  .graph-container {
+    min-height: min(34vh, 280px);
+  }
+
+  .page-wrapper > header.hero {
+    margin-bottom: 24px;
+  }
+
   /* Labels remain visible; bump font-size so they stay legible
      as the SVG scales down on narrow screens */
   .ring-label { font-size: 11px; }

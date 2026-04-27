@@ -2,24 +2,16 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { isAdminEmail } from '@/lib/auth/admin-allowlist';
 import { getAdminClient } from '@/lib/supabase/admin-server';
 import { createClient } from '@/lib/supabase/server';
 
 /** Shared auth guard — returns user or throws if not authenticated / not an allowed admin. */
-async function requireAdmin(): Promise<{ id: string }> {
+async function requireAdmin(): Promise<{ id: string; email?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-
-  const allowed = (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (!allowed.includes((user.email ?? '').toLowerCase())) {
-    throw new Error('Not authorized');
-  }
-
+  if (!isAdminEmail(user.email)) throw new Error('Not authorized');
   return user;
 }
 

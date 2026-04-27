@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { isAdminEmail } from '@/lib/auth/admin-allowlist';
 import { rateLimit } from '@/lib/rate-limit';
 
 export async function middleware(request: NextRequest) {
@@ -88,10 +89,29 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user && !pathname.startsWith('/admin/login')) {
+    const isLoginRoute = pathname.startsWith('/admin/login');
+
+    // Unauthenticated → login (except already on login page)
+    if (!user && !isLoginRoute) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/admin/login';
       return NextResponse.redirect(loginUrl);
+    }
+
+    // Authenticated but email not in ADMIN_EMAILS → cannot access admin UI
+    if (user && !isLoginRoute && !isAdminEmail(user.email)) {
+      const home = request.nextUrl.clone();
+      home.pathname = '/';
+      home.search = '';
+      return NextResponse.redirect(home);
+    }
+
+    // Already signed in as an allowed admin → skip login form
+    if (user && isLoginRoute && isAdminEmail(user.email)) {
+      const adminUrl = request.nextUrl.clone();
+      adminUrl.pathname = '/admin';
+      adminUrl.search = '';
+      return NextResponse.redirect(adminUrl);
     }
   }
 

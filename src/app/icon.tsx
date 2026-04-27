@@ -23,7 +23,6 @@ export default async function Icon() {
           display: 'flex',
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={svgBase64} width={32} height={32} alt="" />
       </div>
     ),

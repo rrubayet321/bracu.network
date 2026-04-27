@@ -71,6 +71,7 @@ export default function NetworkGraph({ members, highlightSlug, onHoverSlug }: Ne
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const nodesRef = useRef<Node[]>([]);
+  const drawRef = useRef<(() => void) | null>(null);
   const rafRef = useRef<number>(0);
   const sizeRef = useRef({ w: 0, h: 0 });
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
@@ -163,6 +164,8 @@ export default function NetworkGraph({ members, highlightSlug, onHoverSlug }: Ne
   }, [members, memberIndexBySlug]);
 
   const stepPhysics = useCallback(() => {
+    /* Node objects in nodesRef are intentionally mutated in-place (canvas physics). */
+    /* eslint-disable react-hooks/immutability -- ref-holding simulation state */
     const nodes = nodesRef.current;
     const { w, h } = sizeRef.current;
     if (!nodes.length || !w || !h) return 0;
@@ -226,6 +229,7 @@ export default function NetworkGraph({ members, highlightSlug, onHoverSlug }: Ne
     }
 
     return totalEnergy;
+    /* eslint-enable react-hooks/immutability */
   }, []);
 
   const draw = useCallback(() => {
@@ -236,7 +240,9 @@ export default function NetworkGraph({ members, highlightSlug, onHoverSlug }: Ne
 
     const { w, h } = sizeRef.current;
     if (!w || !h) {
-      rafRef.current = requestAnimationFrame(draw);
+      rafRef.current = requestAnimationFrame(() => {
+        drawRef.current?.();
+      });
       return;
     }
 
@@ -251,12 +257,14 @@ export default function NetworkGraph({ members, highlightSlug, onHoverSlug }: Ne
     }
 
     // Update imgLoaded flags
+    /* eslint-disable react-hooks/immutability -- ref node flags */
     for (const node of nodesRef.current) {
       if (node.img && !node.imgLoaded) {
         node.imgLoaded = node.img.complete && node.img.naturalWidth > 0;
         if (node.imgLoaded) isSettledRef.current = false; // repaint once
       }
     }
+    /* eslint-enable react-hooks/immutability */
 
     ctx.clearRect(0, 0, w, h);
 
@@ -352,8 +360,14 @@ export default function NetworkGraph({ members, highlightSlug, onHoverSlug }: Ne
       }
     }
 
-    rafRef.current = requestAnimationFrame(draw);
+    rafRef.current = requestAnimationFrame(() => {
+      drawRef.current?.();
+    });
   }, [stepPhysics]);
+
+  useEffect(() => {
+    drawRef.current = draw;
+  }, [draw]);
 
   // Canvas setup, events, resize
   useEffect(() => {
@@ -466,7 +480,9 @@ export default function NetworkGraph({ members, highlightSlug, onHoverSlug }: Ne
     canvas.addEventListener('pointerleave', onPointerLeave);
 
     cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(draw);
+    rafRef.current = requestAnimationFrame(() => {
+      drawRef.current?.();
+    });
 
     return () => {
       cancelAnimationFrame(rafRef.current);

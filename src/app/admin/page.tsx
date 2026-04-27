@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { requireAdminSession } from '@/lib/auth/require-admin';
 import { getAdminClient } from '@/lib/supabase/admin-server';
 import AdminMemberCard from '@/components/AdminMemberCard';
 import { signOut } from './actions';
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminPage() {
+  await requireAdminSession();
+
   const admin = getAdminClient();
 
   // Fetch pending (unapproved) members
