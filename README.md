@@ -29,13 +29,13 @@ It is **not a social network**. It is a curated, low-noise directory of real bui
 ## Features
 
 - **Animated hero** — SVG webring pulse animation: an orbiting dot traces a ring of labeled discipline nodes (designers, engineers, researchers, founders), with cross-chord connections and reduced-motion support
-- **Live member directory** — searchable, filterable table with avatars, department, website, and social links; filter by student or alumni
+- **Live member directory** — searchable, filterable table with avatars, department, website, and social links; student/alumni and “open to hire” badges; fixed column layout on desktop (no overlap) with horizontal scroll on narrow viewports; simplified name + links view on small screens
 - **2D force-directed network graph** — physics-based canvas graph (custom Verlet engine, no library); hover-synced bidirectionally with the member table; draggable nodes; click to open member site
 - **Student / alumni differentiation** — members are tagged as current student or alumni; separate filter tabs + coloured badges in the directory
 - **Multi-step join form** — 4-step application with progress bar, localStorage draft persistence, drag-and-drop photo upload, real-time social URL validation, rate-limit countdown, and auto-scroll to first error
 - **Webring embed widget** — drop a `<script>` tag on your personal site to join the ring
 - **Admin dashboard** — full-card view of pending and approved members; approve, reject, remove, and change member type (student/alumni) — all with instant ISR cache revalidation and inline error feedback on action failures
-- **Production-hardened** — rate limiting, CSP headers, Row-Level Security, EXIF stripping, Zod validation, auth guard on all mutations
+- **Production-hardened** — rate limiting, CSP headers, Row-Level Security, EXIF stripping, Zod validation; **admin** gated by session + `ADMIN_EMAILS` in middleware, on the admin page, and on every server action
 
 ---
 
@@ -47,8 +47,9 @@ It is **not a social network**. It is a curated, low-noise directory of real bui
 │                                                         │
 │  ┌──────────────┐   ┌────────────────┐   ┌──────────┐  │
 │  │  middleware  │──▶│  Next.js 16    │──▶│  /api/   │  │
-│  │  rate-limit  │   │  App Router    │   │  members │  │
-│  │  auth-guard  │   │  Server Actions│   │  (REST)  │  │
+│  │  rate limits │   │  App Router    │   │  members │  │
+│  │  admin email │   │  Server Actions│   │  (REST)  │  │
+│  │  allowlist   │   │                │   │          │  │
 │  └──────────────┘   └───────┬────────┘   └──────────┘  │
 │                              │                          │
 └──────────────────────────────┼──────────────────────────┘
@@ -81,7 +82,8 @@ It is **not a social network**. It is a curated, low-noise directory of real bui
 | **`sharp` for image processing** | Profile photos are resized to 400×400 and EXIF metadata (including GPS) is stripped before upload |
 | **In-memory sliding-window rate limiter** | No external service required; dual enforcement at middleware and server action level. For multi-region deployments, swap for Upstash Redis. |
 | **`zod` for validation** | Strict schema including BRACU-specific student ID regex and `@bracu.ac.bd` email enforcement |
-| **localStorage form persistence** | Join form draft is saved to localStorage on every keystroke and restored on revisit |
+| **localStorage form persistence** | Join form draft is saved to localStorage on every keystroke and restored via lazy initial state (no extra hydration effect) |
+| **Responsive home layout** | Wider content shell on large screens; safe-area padding and touch-friendly controls on phones; graph height scales down on small viewports |
 
 ---
 
@@ -91,7 +93,7 @@ It is **not a social network**. It is a curated, low-noise directory of real bui
 |---|---|
 | **HTTP headers** | CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options`, `Referrer-Policy` via `next.config.ts` |
 | **Rate limiting** | 5 join submissions/min · 10 admin login attempts/5min (middleware + server action double enforcement) |
-| **Auth guard** | `requireAdmin()` called on every admin mutation — validates session server-side via `getUser()` and checks the caller's email against an `ADMIN_EMAILS` allowlist (env var); unauthenticated and unauthorised calls are rejected before any DB access |
+| **Admin access** | **`ADMIN_EMAILS`** (comma-separated, case-insensitive) must be set in env (e.g. Vercel). The signed-in user's email must match. Enforcement: **middleware** (`isAdminEmail`) redirects non-allowlist users away from `/admin`; **`requireAdminSession()`** on the admin page before any data load; **`requireAdmin()`** on every admin server action. If `ADMIN_EMAILS` is empty, no one is treated as admin (fail closed). Admins are Supabase Auth users whose emails appear in the allowlist |
 | **Input sanitization** | All fields trimmed; `roles` and `interests` arrays capped at 10 items × 60 chars |
 | **Image validation** | Magic-byte MIME check (not just extension), 5 MB cap, EXIF strip, sharp resize to 400×400 |
 | **Embed XSS protection** | `embed.js` builds DOM nodes via `createElement` / `textContent`; no `innerHTML` interpolation; URLs validated as `https://` only |
@@ -138,7 +140,7 @@ Then fill in your own values locally. **Never commit `.env.local` or real secret
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key (safe to expose) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only service role key — never exposed to the browser |
-| `ADMIN_EMAILS` | Comma-separated list of email addresses that have admin access (e.g. `alice@example.com,bob@example.com`) |
+| `ADMIN_EMAILS` | **Required for admin UI.** Comma-separated emails allowed to open `/admin` (must match Supabase Auth users). Set locally and in **Vercel** project env; **redeploy** after changes |
 
 ### Database
 
@@ -217,8 +219,10 @@ npm run dev
 
 | Path | Description |
 |---|---|
-| `/admin/login` | Sign in with your Supabase admin email |
-| `/admin` | Full dashboard — pending applications + approved members |
+| `/admin/login` | Supabase sign-in. If you’re already signed in with an allowlisted email, you’re redirected to `/admin` |
+| `/admin` | Full dashboard — pending applications + approved members (blocked unless session + `ADMIN_EMAILS` match) |
+
+**Who can access:** only users who sign in **and** whose email is listed in `ADMIN_EMAILS`. Everyone else (including other logged-in Supabase users) is sent to the home page when visiting `/admin`.
 
 From the dashboard you can:
 - **Approve** a pending application (instantly revalidates the home page cache)
@@ -226,7 +230,7 @@ From the dashboard you can:
 - **Remove** an approved member
 - **Set member type** (student / alumni) via a dropdown on each card — this controls how members are filtered on the home page
 
-All actions are protected by `requireAdmin()` which validates both the session and the caller's email against the `ADMIN_EMAILS` allowlist. Failures are surfaced as inline error messages on the card.
+The page load is gated by `requireAdminSession()`; mutations use `requireAdmin()` — both use the same `ADMIN_EMAILS` allowlist (`src/lib/auth/admin-allowlist.ts`). Failures on actions are surfaced as inline error messages on the card.
 
 ---
 
@@ -253,33 +257,24 @@ This renders a small navigation bar linking to the previous and next member in t
 ## Project structure
 
 ```
-video/
-└── index.html          # HyperFrames composition (GSAP, 1920×1080, 14 s)
-└── bracu-network.mp4   # Rendered launch video
-
 src/
 ├── app/
-│   ├── admin/          # Protected admin dashboard (approve/reject/remove/setType)
-│   ├── api/members/    # Public REST endpoint (embed widget + CORS)
+│   ├── admin/          # Admin dashboard + server actions; login page
+│   ├── api/members/    # Public GET (embed widget + CORS)
 │   ├── join/           # 4-step application form + server actions
-│   ├── icon.tsx        # Dynamic favicon
-│   ├── layout.tsx      # Root layout + analytics + global footer
-│   └── page.tsx        # Home page (ISR 60s + on-demand revalidation)
-├── components/
-│   ├── AnimatedHero    # SVG webring pulse animation (ring + orbiting dot + chords)
-│   ├── HomeClient      # Client shell — wires table ↔ graph hover sync
-│   ├── MemberTable     # Searchable/filterable directory table with type badges
-│   ├── NetworkGraph    # 2D force-directed canvas graph (custom physics)
-│   ├── JoinForm        # 4-step form with localStorage, drag-drop, validation
-│   ├── AdminMemberCard # Full member card with approve/reject/remove/type toggle
-│   ├── FilterDropdown  # Department + role filters
-│   └── SocialIcons     # Uniform social link icons
+│   ├── icon.tsx        # Dynamic favicon (ImageResponse)
+│   ├── layout.tsx      # Root layout, viewport, analytics, global footer
+│   └── page.tsx        # Home (member fetch + client shell)
+├── components/         # Hero, table, graph, join form, admin cards, filters, icons
 ├── lib/
-│   ├── rate-limit.ts   # Sliding-window in-memory rate limiter
-│   ├── with-timeout.ts # DB query timeout wrapper
-│   ├── supabase/       # Client / server / admin Supabase instances
-│   └── data/           # Server-only data fetchers (server-only import guard)
-└── middleware.ts        # Auth guard + rate limiting (Edge)
+│   ├── auth/           # `admin-allowlist.ts`, `require-admin.ts` (server session guard)
+│   ├── rate-limit.ts
+│   ├── with-timeout.ts
+│   ├── supabase/       # client / server / admin clients
+│   └── data/           # Approved-members fetcher for home
+└── types/
+
+middleware.ts             # Edge: join + admin rate limits; Supabase session + ADMIN_EMAILS for /admin
 ```
 
 ---
